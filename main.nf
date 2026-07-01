@@ -118,39 +118,28 @@ workflow {
     // que plot_results.py consome via --mmgbsa-csv (MMGBSA_INTERPRET só emite
     // painel_mmgbsa.png + mmgbsa_summary.txt, não um CSV).
     //
-    // STABILITY_FILTER/CLUSTERING/MMGBSA_ROBUST têm errorStrategy 'ignore'
-    // (gmx_MMPBSA é sabidamente instável) — se qualquer um falhar, essa amostra
-    // não emite em MMGBSA_ROBUST.out.results. Para não travar o PLOT principal
-    // (RMSD/RMSF/Rg/tríade, que já são análises validadas) nesse cenário,
-    // usamos join(remainder: true) ancorado no canal de amostras de entrada e
-    // caímos para um CSV placeholder vazio (frame,TOTAL) quando o MM-GBSA não
-    // produziu resultado — plot_results.py trata isso como "sem MM-GBSA" e
-    // simplesmente omite o painel de energia de ligação.
-    ch_sample_ids = ch_input.map { meta, receptor, ligand -> meta }
-
-    ch_mmgbsa_csv_for_plot = ch_sample_ids
-        .join(MMGBSA_ROBUST.out.results.map { meta, csv, dat, decomp -> tuple(meta, csv) }, remainder: true)
-        .map { meta, csv -> tuple(meta, csv ?: file("${projectDir}/assets/no_mmgbsa.csv")) }
-
+    // Join simples (sem remainder): STABILITY_FILTER/CLUSTERING/MMGBSA_ROBUST
+    // têm errorStrategy 'ignore' (gmx_MMPBSA é instável) — se a amostra falhar
+    // em qualquer um deles, PLOT simplesmente não roda para ela, igual ao
+    // comportamento padrão do resto da cadeia quando um processo falha.
     ch_plot_xvg = ANALYSES.out.xvg
         .join(ANALYSES_TRIAD.out.triad, by: [0])
         .join(ANALYSES_TRIAD.out.info,  by: [0])
         .map { meta, xvgs, ndx, d1, d2, d3, d4, s1, s2, s3, s4, info ->
             def all_files = (xvgs instanceof List ? xvgs : [xvgs]) +
                             [d1, d2, d3, d4, s1, s2, s3, s4, info]
-            tuple(meta, all_files, ndx)
+            tuple(meta.id, meta, all_files, ndx)
         }
 
-    // NOTA: meta em ch_plot_xvg vem de ANALYSES_TRIAD (contém triad_1..4),
-    // enquanto meta em ch_mmgbsa_csv_for_plot vem do canal base (só "id") —
-    // são mapas diferentes em conteúdo. Para não depender de igualdade de Map
-    // (frágil e não garantida pelo operador join por valor de mapa completo),
-    // o merge final usa meta.id (String) como chave explícita.
-    ch_plot_xvg_keyed   = ch_plot_xvg.map           { meta, all_files, ndx -> tuple(meta.id, meta, all_files, ndx) }
-    ch_mmgbsa_csv_keyed = ch_mmgbsa_csv_for_plot.map { meta, csv           -> tuple(meta.id, csv) }
+    // meta em ch_plot_xvg vem de ANALYSES_TRIAD (contém triad_1..4), enquanto
+    // meta em MMGBSA_ROBUST.out.results vem do canal base (só "id") — mapas
+    // diferentes em conteúdo. Join explícito por meta.id (String) em vez de
+    // depender de igualdade de Map completo.
+    ch_mmgbsa_keyed = MMGBSA_ROBUST.out.results
+        .map { meta, csv, dat, decomp -> tuple(meta.id, csv) }
 
-    ch_plot_input = ch_plot_xvg_keyed
-        .join(ch_mmgbsa_csv_keyed, by: 0)
+    ch_plot_input = ch_plot_xvg
+        .join(ch_mmgbsa_keyed, by: 0)
         .map { id, meta, all_files, ndx, csv -> tuple(meta, all_files, ndx, csv) }
 
     PLOT(ch_plot_input)

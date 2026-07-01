@@ -69,8 +69,7 @@ Milena-MD/
 │   └── GORE12T-ligand.pdb               # Cadeia B, resíduos 1-75
 │
 ├── assets/
-│   ├── samplesheet_dn773_gore12t.csv    # Samplesheet de entrada
-│   └── no_mmgbsa.csv                    # Placeholder (fallback se MM-GBSA falhar)
+│   └── samplesheet_dn773_gore12t.csv    # Samplesheet de entrada
 │
 └── complexo-DN773-GORE12T.pdb           # Pose de referência/preview (NÃO é input do pipeline)
 ```
@@ -101,11 +100,10 @@ manualmente para conferência visual — o pipeline recebe receptor e ligante
 `STABILITY_FILTER`, `CLUSTERING` e `MMGBSA_ROBUST` têm `errorStrategy 'ignore'`
 (gmx_MMPBSA é sabidamente instável — daí o wrapper `tleap` embutido em
 `mmgbsa_robust` que corrige o bug de offset de índices de ponte dissulfeto na
-gmx_MMPBSA 1.6.x). Se qualquer etapa do MM-GBSA falhar, o `PLOT` final **não
-trava**: o `main.nf` usa `join(remainder: true)` para cair em um CSV
-placeholder vazio (`assets/no_mmgbsa.csv`) nesse cenário — o painel
-RMSD/RMSF/Rg/tríade (análises já validadas) sempre é gerado, e o painel de
-energia de ligação MM-GBSA simplesmente é omitido se não houver dados.
+gmx_MMPBSA 1.6.x). Se qualquer etapa do MM-GBSA falhar para uma amostra, o
+`PLOT` dessa amostra simplesmente não roda (join direto entre `ANALYSES`/
+`ANALYSES_TRIAD` e `MMGBSA_ROBUST.out.results`, sem fallback) — mesmo
+comportamento padrão do resto da cadeia quando um processo falha.
 
 ---
 
