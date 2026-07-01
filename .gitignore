@@ -1,0 +1,35 @@
+# Claude Code
+.claude/
+
+# Nextflow
+.nextflow/
+.nextflow.log*
+work/
+results/
+DN773-GORE12T/
+
+# GROMACS outputs (large)
+*.xtc
+*.trr
+*.edr
+*.tng
+*.cpt
+*.log
+\#*
+
+# Arquivos temporários
+*.swp
+*~
+__pycache__/
+*.pyc
+.DS_Store
+
+# Manter inputs e scripts
+!*.pdb
+!*.py
+!*.sh
+!*.nf
+!*.config
+!*.csv
+!*.yml
+!*.md

@@ -1,0 +1,2 @@
+sample_id,receptor,ligand,triad_1,triad_2,triad_3,triad_4
+dn773-gore12t,/home/eulalio/gromacs/Milena-MD/data/DN773-receptor.pdb,/home/eulalio/gromacs/Milena-MD/data/GORE12T-ligand.pdb,69,116,213,207

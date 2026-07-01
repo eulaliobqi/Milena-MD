@@ -1,0 +1,26 @@
+# Ambiente Conda separado para gmx_MMPBSA + AmberTools
+#
+# OBRIGATÓRIO: este ambiente deve ser criado SEPARADAMENTE do ambiente
+# principal (md-gromacs), pois o GROMACS com CUDA conflita com cpptraj.
+#
+# Criação:
+#   mamba env create -f environment-mmgbsa.yml
+#
+# Verificação:
+#   mamba run -n mmgbsa-env gmx_MMPBSA --version
+#   mamba run -n mmgbsa-env cpptraj --version
+
+name: mmgbsa-env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - ambertools>=22          # inclui cpptraj, tleap, sander
+  - numpy
+  - matplotlib
+  - pandas
+  - pip
+  - pip:
+    - gmx_MMPBSA>=1.6.0     # requer ambertools no mesmo ambiente

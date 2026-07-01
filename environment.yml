@@ -1,0 +1,22 @@
+name: md-gromacs
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - gromacs=2026.0=*mpi_openmpi_cuda*
+  - openmpi
+  - numpy
+  - matplotlib
+  - scipy
+  - seaborn
+  - mdtraj<=1.9.9
+  - mdanalysis>=2.0
+  - nextflow>=23.04
+  - ambertools
+  - pip
+  - pip:
+    - pdb2pqr>=3.6
+    - gmx_MMPBSA
+    - prolif
