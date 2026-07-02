@@ -54,8 +54,16 @@ process CLUSTERING {
 
     # ── Cria subtrajetória para MMGBSA por subsampling da fase estável ───────
     # Conta frames reais na fase estável
-    STABLE_FRAMES=\$(${params.gmx_cmd} check -f ${stable_xtc} 2>&1 \\
-        | grep -E "^Last frame" | awk '{print \$3}' || echo "1000")
+    # NOTA: o `|| echo "1000"` sozinho não pega o caso "sem match" — o exit
+    # code do pipe é o do awk (sempre 0), não do grep. Precisa checar -z depois.
+    CHECK_OUT=\$(${params.gmx_cmd} check -f ${stable_xtc} 2>&1)
+    STABLE_FRAMES=\$(echo "\${CHECK_OUT}" | grep -E "^Last frame" | awk '{print \$3}')
+    if [ -z "\${STABLE_FRAMES}" ]; then
+        echo "WARN: nao foi possivel extrair 'Last frame' de gmx check -- usando fallback 1000" >&2
+        echo "--- gmx check raw output (fallback usado) ---" >> clustering_report.txt
+        echo "\${CHECK_OUT}" >> clustering_report.txt
+        STABLE_FRAMES=1000
+    fi
 
     # Calcula stride para atingir target_frames
     SKIP=\$(python3 -c "print(max(1, int(\${STABLE_FRAMES} // ${target_frames})))")
