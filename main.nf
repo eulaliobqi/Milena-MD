@@ -113,34 +113,30 @@ workflow {
     MMGBSA_INTERPRET(ch_mmgbsa_interpret_input)
 
     // ── Plot final — painel composto (RMSD/RMSF/Rg/contatos/H-bonds/SASA +
-    // tríade + MM-GBSA). O CSV bruto do MM-GBSA (mmgbsa_results.csv) vem de
-    // MMGBSA_ROBUST.out.results — é o único dos dois módulos que emite o CSV
-    // que plot_results.py consome via --mmgbsa-csv (MMGBSA_INTERPRET só emite
-    // painel_mmgbsa.png + mmgbsa_summary.txt, não um CSV).
+    // tríade [+ MM-GBSA se disponível]).
     //
-    // Join simples (sem remainder): STABILITY_FILTER/CLUSTERING/MMGBSA_ROBUST
-    // têm errorStrategy 'ignore' (gmx_MMPBSA é instável) — se a amostra falhar
-    // em qualquer um deles, PLOT simplesmente não roda para ela, igual ao
-    // comportamento padrão do resto da cadeia quando um processo falha.
-    ch_plot_xvg = ANALYSES.out.xvg
+    // PLOT NÃO depende de MMGBSA_ROBUST via canal/join — gmx_MMPBSA se
+    // mostrou instável nas primeiras rodadas de DN773-GORE12T (2026-07-02:
+    // já falhou por args vazios, args duplicados e erro de ambiente), e um
+    // join anterior com MMGBSA_ROBUST.out.results (mesmo com
+    // remainder:true + CSV placeholder) travou o PLOT inteiro quando
+    // MM-GBSA falhava — ver commit 52f605d. Em vez de religar esse join,
+    // PLOT usa sempre assets/no_mmgbsa.csv (arquivo estático, sem canal);
+    // plot_results.py já trata esse CSV placeholder graciosamente
+    // (load_mmgbsa_csv retorna None com <2 linhas → has_mmgbsa=False, painel
+    // MM-GBSA simplesmente omitido). Resultado: RMSD/RMSF/Rg/tríade sempre
+    // saem, MM-GBSA é estritamente bônus quando MMGBSA_INTERPRET funcionar
+    // (painel separado, publicado em mmgbsa/painel_mmgbsa.png).
+    ch_no_mmgbsa = file("${projectDir}/assets/no_mmgbsa.csv")
+
+    ch_plot_input = ANALYSES.out.xvg
         .join(ANALYSES_TRIAD.out.triad, by: [0])
         .join(ANALYSES_TRIAD.out.info,  by: [0])
         .map { meta, xvgs, ndx, d1, d2, d3, d4, s1, s2, s3, s4, info ->
             def all_files = (xvgs instanceof List ? xvgs : [xvgs]) +
                             [d1, d2, d3, d4, s1, s2, s3, s4, info]
-            tuple(meta.id, meta, all_files, ndx)
+            tuple(meta, all_files, ndx, ch_no_mmgbsa)
         }
-
-    // meta em ch_plot_xvg vem de ANALYSES_TRIAD (contém triad_1..4), enquanto
-    // meta em MMGBSA_ROBUST.out.results vem do canal base (só "id") — mapas
-    // diferentes em conteúdo. Join explícito por meta.id (String) em vez de
-    // depender de igualdade de Map completo.
-    ch_mmgbsa_keyed = MMGBSA_ROBUST.out.results
-        .map { meta, csv, dat, decomp -> tuple(meta.id, csv) }
-
-    ch_plot_input = ch_plot_xvg
-        .join(ch_mmgbsa_keyed, by: 0)
-        .map { id, meta, all_files, ndx, csv -> tuple(meta, all_files, ndx, csv) }
 
     PLOT(ch_plot_input)
 }
