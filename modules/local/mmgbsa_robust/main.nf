@@ -203,11 +203,14 @@ MMEOF
         echo "ERRO: FINAL_RESULTS_MMGBSA.dat não gerado" | tee -a mmgbsa_validation.txt
         echo "--- Últimas 40 linhas do log ---" >> mmgbsa_validation.txt
         tail -40 mmgbsa.log >> mmgbsa_validation.txt
-        # Arquivos vazios para não bloquear downstream
+        # Arquivos vazios para não bloquear downstream — sair com 0 é
+        # proposital: com errorStrategy 'ignore', um exit != 0 faz a tarefa
+        # não emitir NENHUM output (mesmo os placeholders acima existindo no
+        # work dir), o que travava PLOT rio abaixo. O log completo continua
+        # em mmgbsa_validation.txt/mmgbsa.log para diagnóstico.
         echo "No results — gmx_MMPBSA failed" > FINAL_RESULTS_MMGBSA.dat
         echo "frame,TOTAL"                     > mmgbsa_results.csv
         echo "resid,resname,total"              > decomp_results.csv
-        exit 1
     fi
     """
 }
