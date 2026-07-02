@@ -164,12 +164,18 @@ WEOF
     echo "bin_patch/tleap criado" >> mmgbsa_validation.txt
 
     # ── 4. Executa gmx_MMPBSA no ambiente isolado ────────────────────────────
-    # NOTA: usar heredoc com delimitador entre aspas ('MMEOF') em vez de
-    # `bash -c "..."` — o escaping quádruplo necessário para sobreviver a
-    # Groovy + aspas duplas externas + bash -c fazia ${md_tpr}/${mmgbsa_xtc}/
-    # ${lig_ndx} chegarem vazios em -cs/-ct/-ci (só -cg, com valores
-    # literais, sobrevivia). Heredoc quotado copia o corpo verbatim, só a
-    # interpolação Groovy (uma vez, no render) importa.
+    # NOTA: uma tentativa anterior interpolava ${md_tpr}/${mmgbsa_xtc}/
+    # ${lig_ndx} diretamente DENTRO do heredoc quotado — o .command.sh
+    # renderizado mostrava -cs/-ct/-ci vazios (confirmado lendo o .command.sh
+    # gerado no servidor), mesmo essas mesmas variáveis interpolando
+    # corretamente mais acima no mesmo script (seções 1a/1b). Causa exata
+    # não identificada com certeza; contornada exportando para variáveis de
+    # ambiente bash ANTES do heredoc (mesmo padrão comprovado das seções
+    # 1a/1b), deixando o heredoc 100% literal — zero ${...} do Nextflow
+    # dentro dele.
+    export MD_TPR="${md_tpr}"
+    export MMGBSA_XTC="${mmgbsa_xtc}"
+    export LIG_NDX="${lig_ndx}"
     echo "[MMGBSA] Iniciando gmx_MMPBSA (pode demorar 20-60 min)..." >&2
 
     cat > run_mmgbsa.sh << 'MMEOF'
@@ -178,9 +184,9 @@ echo '[mmgbsa-env] PATH patch ativo' >&2
 
 gmx_MMPBSA -O \\
     -i mmgbsa.in \\
-    -cs ${md_tpr} \\
-    -ct ${mmgbsa_xtc} \\
-    -ci ${lig_ndx} \\
+    -cs "\$MD_TPR" \\
+    -ct "\$MMGBSA_XTC" \\
+    -ci "\$LIG_NDX" \\
     -cg Receptor Ligante \\
     -o  FINAL_RESULTS_MMGBSA.dat \\
     -eo mmgbsa_results.csv \\
