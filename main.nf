@@ -129,10 +129,23 @@ workflow {
     // (painel separado, publicado em mmgbsa/painel_mmgbsa.png).
     ch_no_mmgbsa = file("${projectDir}/assets/no_mmgbsa.csv")
 
-    ch_plot_input = ANALYSES.out.xvg
-        .join(ANALYSES_TRIAD.out.triad, by: [0])
-        .join(ANALYSES_TRIAD.out.info,  by: [0])
-        .map { meta, xvgs, ndx, d1, d2, d3, d4, s1, s2, s3, s4, info ->
+    // NOTA: ANALYSES_TRIAD roda com meta ESTENDIDO (meta + triad_1..4,
+    // injetado em ch_triad_input acima), enquanto ANALYSES roda com o meta
+    // base (só id). join(by:[0]) compara o Map inteiro — mapas com chaves
+    // diferentes nunca são iguais em Groovy, então esse join nunca emitia
+    // nada e PLOT nunca disparava, em NENHUMA tentativa, independente do
+    // MM-GBSA (só ficou visível depois de remover a dependência de
+    // MMGBSA_ROBUST acima). Fix: chavear por meta.id (String) nos três
+    // canais antes de juntar — mesma técnica já usada corretamente no join
+    // de MMGBSA_INTERPRET (por isso aquele sempre funcionou).
+    ch_xvg_keyed   = ANALYSES.out.xvg.map         { meta, xvgs, ndx -> tuple(meta.id, meta, xvgs, ndx) }
+    ch_triad_keyed = ANALYSES_TRIAD.out.triad.map { meta, d1, d2, d3, d4, s1, s2, s3, s4 -> tuple(meta.id, d1, d2, d3, d4, s1, s2, s3, s4) }
+    ch_info_keyed  = ANALYSES_TRIAD.out.info.map  { meta, info -> tuple(meta.id, info) }
+
+    ch_plot_input = ch_xvg_keyed
+        .join(ch_triad_keyed, by: 0)
+        .join(ch_info_keyed,  by: 0)
+        .map { id, meta, xvgs, ndx, d1, d2, d3, d4, s1, s2, s3, s4, info ->
             def all_files = (xvgs instanceof List ? xvgs : [xvgs]) +
                             [d1, d2, d3, d4, s1, s2, s3, s4, info]
             tuple(meta, all_files, ndx, ch_no_mmgbsa)
