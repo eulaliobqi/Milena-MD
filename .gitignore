@@ -20,9 +20,13 @@ DN773-GORE12T/
 # Arquivos temporários
 *.swp
 *~
+~$*
 __pycache__/
 *.pyc
 .DS_Store
+
+# Backups locais de resultados (regeneráveis via pipeline)
+/analise/
 
 # Manter inputs e scripts
 !*.pdb
