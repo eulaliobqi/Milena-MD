@@ -164,20 +164,15 @@ WEOF
     echo "bin_patch/tleap criado" >> mmgbsa_validation.txt
 
     # ── 4. Executa gmx_MMPBSA no ambiente isolado ────────────────────────────
-    # NOTA: uma tentativa anterior interpolava as variaveis Nextflow md_tpr,
-    # mmgbsa_xtc e lig_ndx diretamente DENTRO do heredoc quotado -- o
-    # .command.sh renderizado mostrava -cs/-ct/-ci vazios (confirmado lendo
-    # o .command.sh gerado no servidor), mesmo essas mesmas variaveis
-    # interpolando corretamente mais acima no mesmo script (secoes 1a/1b).
-    # Suspeita forte: o parser Groovy escaneia a string inteira em busca do
-    # padrao cifrao-chaves, sem reconhecer comentarios/heredocs bash -- um
-    # comentario com esse padrao literal (ver este proprio bug ao vivo, se
-    # voce tentar escrever o padrao aqui) quebra a compilacao. Contornado
-    # exportando para variaveis de ambiente bash ANTES do heredoc (mesmo
-    # padrao comprovado das secoes 1a/1b), deixando o heredoc 100% literal.
-    export MD_TPR="${md_tpr}"
-    export MMGBSA_XTC="${mmgbsa_xtc}"
-    export LIG_NDX="${lig_ndx}"
+    # NOTA: duas tentativas anteriores tentaram levar md_tpr/mmgbsa_xtc/lig_ndx
+    # ate dentro de run_mmgbsa.sh via variavel de ambiente bash (export antes
+    # do heredoc, ou interpolacao Groovy direta no heredoc) -- ambas falharam
+    # porque "mamba run -n <env> bash run_mmgbsa.sh" reconstroi o ambiente do
+    # subprocesso e nao repassa variaveis de ambiente ad-hoc do shell pai,
+    # mesmo exportadas (confirmado: -cs/-ct/-ci vazios de novo na 2a rodada).
+    # Fix definitivo: passar os caminhos como ARGUMENTOS POSICIONAIS do script
+    # (\$1/\$2/\$3) -- argumentos de linha de comando atravessam o exec do
+    # "mamba run" explicitamente, sem depender de heranca de ambiente.
     echo "[MMGBSA] Iniciando gmx_MMPBSA (pode demorar 20-60 min)..." >&2
 
     cat > run_mmgbsa.sh << 'MMEOF'
@@ -186,9 +181,9 @@ echo '[mmgbsa-env] PATH patch ativo' >&2
 
 gmx_MMPBSA -O \\
     -i mmgbsa.in \\
-    -cs "\$MD_TPR" \\
-    -ct "\$MMGBSA_XTC" \\
-    -ci "\$LIG_NDX" \\
+    -cs "\$1" \\
+    -ct "\$2" \\
+    -ci "\$3" \\
     -cg Receptor Ligante \\
     -o  FINAL_RESULTS_MMGBSA.dat \\
     -eo mmgbsa_results.csv \\
@@ -196,7 +191,7 @@ gmx_MMPBSA -O \\
     -nogui
 MMEOF
 
-    mamba run -n mmgbsa-env bash run_mmgbsa.sh 2>&1 | tee mmgbsa.log
+    mamba run -n mmgbsa-env bash run_mmgbsa.sh "${md_tpr}" "${mmgbsa_xtc}" "${lig_ndx}" 2>&1 | tee mmgbsa.log
 
     # ── 5. Verifica saídas e cria fallbacks ──────────────────────────────────
     if [ -f FINAL_RESULTS_MMGBSA.dat ]; then
