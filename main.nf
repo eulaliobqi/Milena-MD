@@ -143,15 +143,25 @@ workflow {
 
     PHARMACOPHORE_PROFILE(ch_pharma_input)
 
-    // FE_RERUN precisa da topologia (TOPOLOGY.out) + estrutura final da
-    // produção (PRODUCTION.out.checkpoint) para gerar um .tpr novo com
-    // energygrps Receptor/Ligante (não dá para adicionar isso a um .tpr já
-    // existente) + a subtrajetória já reduzida usada no MM-GBSA
-    // (CLUSTERING.out.for_mmgbsa, ~150 frames — mantém o rerun barato).
+    // FE_RERUN precisa da topologia + estrutura final da produção para gerar
+    // um .tpr novo com energygrps Receptor/Ligante (não dá para adicionar
+    // isso a um .tpr já existente) + a subtrajetória já reduzida usada no
+    // MM-GBSA (CLUSTERING.out.for_mmgbsa, ~150 frames — mantém o rerun
+    // barato).
+    //
+    // NOTA: usar BOX_SOLVATE_IONS.out.system, NÃO TOPOLOGY.out.topology —
+    // o topol.top de TOPOLOGY é anterior à solvatação/adição de íons (só
+    // descreve as ~4405 átomos de proteína); o md.gro da produção tem o
+    // sistema solvatado inteiro (~98191 átomos, água+íons inclusos). O
+    // topol.top de BOX_SOLVATE_IONS já foi atualizado por `solvate`+`genion`
+    // para bater com essa contagem — mesmo topol.top que MINIMIZATION→NVT→
+    // NPT→PRODUCTION usam sem modificação de composição molecular daí em
+    // diante. Sem essa correção, grompp falha com "number of coordinates...
+    // does not match topology" (confirmado em 2026-07-04).
     ch_fe_input = PRODUCTION.out.checkpoint
-        .join(TOPOLOGY.out.topology, by: [0])
+        .join(BOX_SOLVATE_IONS.out.system, by: [0])
         .join(CLUSTERING.out.for_mmgbsa, by: [0])
-        .map { meta, md_gro, md_cpt, md_edr, cplx_gro, top, itps, tpr, mmgbsa_xtc, ndx ->
+        .map { meta, md_gro, md_cpt, md_edr, ions_gro, top, itps, tpr, mmgbsa_xtc, ndx ->
             tuple(meta, md_gro, top, itps, mmgbsa_xtc, ndx)
         }
 
