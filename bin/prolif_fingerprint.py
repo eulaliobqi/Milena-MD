@@ -3,6 +3,14 @@
 """
 Fingerprint de interação (ProLIF) receptor-ligante ao longo da trajetória.
 
+Seleção de cadeias via `moltype` (Protein_chain_A/Protein_chain_B), NÃO por
+intervalo de resid do complexo.pdb -- o GROMACS renumera cada cadeia
+começando em 1 internamente, então um intervalo de resid do PDB original
+(ex. ligante 1-75) captura os resíduos ERRADOS, inclusive água (achado real
+em contact_map.py, 2026-07-04). Os rótulos de resíduo do ProLIF (formato
+"RESNAME123.X") são remapeados de volta para a numeração original do PDB
+por posição, mesma técnica de contact_map.py.
+
 Módulo de maior risco de dependência do conjunto (prolif+rdkit+MDAnalysis é
 a combinação menos testada neste projeto) -- por isso escreve um log de
 diagnóstico ANTES de tentar rodar o ProLIF e cai num fallback com CSV vazio
@@ -11,26 +19,55 @@ já usado em MMGBSA_ROBUST).
 
 Uso:
   prolif_fingerprint.py --complexo-pdb complexo.pdb --tpr md.tpr \
-      --xtc stable.xtc --out-dir . [--ligand-chain B] [--stride 1]
+      --xtc stable.xtc --out-dir . [--stride 1]
 """
 import argparse
 import os
+import re
 import sys
 import traceback
 
 
-def detect_ligand_range(complexo_pdb, ligand_chain='B'):
-    first = last = None
+def read_chain_residues_ordered(complexo_pdb, chain):
+    """Lista (resid, resname) da cadeia, na ordem do arquivo (numeração real do PDB)."""
+    seen = set()
+    residues = []
     with open(complexo_pdb) as fh:
         for line in fh:
-            if line.startswith(('ATOM', 'HETATM')) and line[21:22].strip() == ligand_chain:
-                resnum = int(line[22:26])
-                if first is None:
-                    first = resnum
-                last = resnum
-    if first is None:
-        raise SystemExit(f"ERRO: cadeia {ligand_chain} nao encontrada em {complexo_pdb}")
-    return first, last
+            if line.startswith(('ATOM', 'HETATM')) and line[21:22].strip() == chain:
+                resid = int(line[22:26])
+                if resid not in seen:
+                    seen.add(resid)
+                    residues.append((resid, line[17:20].strip()))
+    if not residues:
+        raise SystemExit(f"ERRO: cadeia {chain} nao encontrada em {complexo_pdb}")
+    return residues
+
+
+def build_resid_map(atomgroup, pdb_residues, label):
+    internal_resids = sorted(set(int(r) for r in atomgroup.resids))
+    if len(internal_resids) != len(pdb_residues):
+        raise SystemExit(
+            f"ERRO: contagem de residuos do {label} nao bate "
+            f"(MDAnalysis={len(internal_resids)}, PDB={len(pdb_residues)})"
+        )
+    return dict(zip(internal_resids, pdb_residues))
+
+
+_LABEL_RE = re.compile(r"^([A-Za-z]+)(\d+)(\..*)?$")
+
+
+def remap_label(label, resid_map):
+    """'ILE1.A' (numeracao interna do GROMACS) -> 'ILE24.A' (numeracao PDB real)."""
+    m = _LABEL_RE.match(str(label))
+    if not m:
+        return label
+    resname, resid_str, suffix = m.groups()
+    resid = int(resid_str)
+    if resid not in resid_map:
+        return label
+    pdb_resid, pdb_resname = resid_map[resid]
+    return f"{pdb_resname}{pdb_resid}{suffix or ''}"
 
 
 def main():
@@ -38,7 +75,6 @@ def main():
     ap.add_argument("--complexo-pdb", required=True)
     ap.add_argument("--tpr", required=True)
     ap.add_argument("--xtc", required=True)
-    ap.add_argument("--ligand-chain", default="B")
     ap.add_argument("--stride", type=int, default=1,
                      help="Usa 1 a cada N frames (default 1 = todos)")
     ap.add_argument("--out-dir", default=".")
@@ -64,13 +100,16 @@ def main():
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
 
-        lig_first, lig_last = detect_ligand_range(args.complexo_pdb, args.ligand_chain)
-        log(f"[OK] Ligante: residuos {lig_first}-{lig_last}")
+        rec_pdb = read_chain_residues_ordered(args.complexo_pdb, "A")
+        lig_pdb = read_chain_residues_ordered(args.complexo_pdb, "B")
 
         u = mda.Universe(args.tpr, args.xtc)
-        lig_sel = u.select_atoms(f"resid {lig_first}-{lig_last}")
-        rec_sel = u.select_atoms(f"protein and not (resid {lig_first}-{lig_last})")
+        rec_sel = u.select_atoms("moltype Protein_chain_A")
+        lig_sel = u.select_atoms("moltype Protein_chain_B")
         log(f"[OK] Selecoes: ligante={len(lig_sel)} atomos, receptor={len(rec_sel)} atomos")
+
+        rec_map = build_resid_map(rec_sel, rec_pdb, "receptor")
+        lig_map = build_resid_map(lig_sel, lig_pdb, "ligante")
 
         fp = plf.Fingerprint([
             "HBAcceptor", "HBDonor", "Hydrophobic", "PiStacking",
@@ -81,6 +120,12 @@ def main():
         fp.run(traj, lig_sel, rec_sel)
 
         df = fp.to_dataframe()
+        # Remapeia os niveis do MultiIndex de colunas para a numeracao PDB real
+        df.columns = df.columns.set_levels(
+            [remap_label(l, lig_map) for l in df.columns.levels[0]], level=0
+        ).set_levels(
+            [remap_label(l, rec_map) for l in df.columns.levels[1]], level=1
+        )
         df.to_csv(csv_path)
         log(f"[OK] {csv_path} ({df.shape[0]} frames x {df.shape[1]} interacoes)")
 
@@ -100,7 +145,7 @@ def main():
         ax.set_xticklabels(pivot.columns, rotation=45, ha='right', fontsize=8)
         ax.set_yticks(range(len(pivot.index)))
         ax.set_yticklabels(pivot.index, fontsize=7)
-        ax.set_title("ProLIF: Frequência de Interação por Resíduo do Receptor")
+        ax.set_title("ProLIF: Frequência de Interação por Resíduo do Receptor\n(numeração PDB)")
         fig.colorbar(im, ax=ax, label="Frequência")
         plt.tight_layout()
         plt.savefig(png_path, dpi=150, bbox_inches='tight')

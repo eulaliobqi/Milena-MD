@@ -20,7 +20,6 @@ process CONTACT_MAP {
         --complexo-pdb ${complexo_pdb} \\
         --tpr ${md_tpr} \\
         --xtc ${stable_xtc} \\
-        --ligand-chain B \\
         --out-dir .
 
     echo "[OK] Mapa de contatos concluido para ${meta.id}" >&2

@@ -20,7 +20,6 @@ process PROLIF_FINGERPRINT {
         --complexo-pdb ${complexo_pdb} \\
         --tpr ${md_tpr} \\
         --xtc ${stable_xtc} \\
-        --ligand-chain B \\
         --out-dir .
 
     echo "[OK] ProLIF (ou fallback) concluido para ${meta.id}" >&2

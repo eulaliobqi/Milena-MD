@@ -4,14 +4,23 @@
 Mapa de contatos receptor-ligante por resíduo, a partir da trajetória
 GROMACS já processada (pós-equilíbrio).
 
-O intervalo de resíduos do ligante é detectado da mesma forma que o módulo
-ANALYSES (leitura direta da cadeia do complexo.pdb original) -- os
-arquivos .gro/.tpr do GROMACS não preservam chain ID, só numeração de
-resíduo, então a seleção usa resid, não chainID.
+Seleção de cadeias via `moltype` (Protein_chain_A/Protein_chain_B, nomes
+atribuídos pelo pdb2gmx com -chainsep ter -merge no -- confirmados no log
+do grompp), NÃO por intervalo de resid. O GROMACS renumera os resíduos de
+cada cadeia começando em 1 internamente (perdido durante pdb2gmx), então
+usar o intervalo de resid do complexo.pdb original (ex. ligante 1-75)
+captura os resíduos ERRADOS -- inclusive água, que continua a numeração
+logo depois do ligante (achado real, 2026-07-04: rótulos apareciam como
+"SOL"/receptor começando em "ILE1" em vez do resid 24 verdadeiro).
+
+Os rótulos de saída são remapeados de volta para a numeração original do
+PDB por POSIÇÃO (pdb2gmx preserva a ordem dos resíduos, só perde a
+numeração) -- assim os resultados usam os mesmos números já usados em
+ANALYSES_TRIAD (His69, Asp116, etc.), não a numeração interna do GROMACS.
 
 Uso:
   contact_map.py --complexo-pdb complexo.pdb --tpr md.tpr --xtc stable.xtc \
-      --out-dir . [--ligand-chain B] [--cutoff 4.0]
+      --out-dir . [--cutoff 4.0]
 """
 import argparse
 import os
@@ -26,37 +35,40 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-def detect_ligand_range(complexo_pdb, ligand_chain='B'):
-    first = last = None
+def read_chain_residues_ordered(complexo_pdb, chain):
+    """Lista (resid, resname) da cadeia, na ordem do arquivo (numeração real do PDB)."""
+    seen = set()
+    residues = []
     with open(complexo_pdb) as fh:
         for line in fh:
-            if line.startswith(('ATOM', 'HETATM')) and line[21:22].strip() == ligand_chain:
-                resnum = int(line[22:26])
-                if first is None:
-                    first = resnum
-                last = resnum
-    if first is None:
-        raise SystemExit(f"ERRO: cadeia {ligand_chain} nao encontrada em {complexo_pdb}")
-    return first, last
+            if line.startswith(('ATOM', 'HETATM')) and line[21:22].strip() == chain:
+                resid = int(line[22:26])
+                if resid not in seen:
+                    seen.add(resid)
+                    residues.append((resid, line[17:20].strip()))
+    if not residues:
+        raise SystemExit(f"ERRO: cadeia {chain} nao encontrada em {complexo_pdb}")
+    return residues
 
 
-def residue_onehot(atomgroup):
-    """Retorna (resids ordenados, matriz esparsa n_atoms x n_res one-hot)."""
-    resids = sorted(set(int(r) for r in atomgroup.resids))
-    idx = {r: i for i, r in enumerate(resids)}
+def build_resid_map(atomgroup, pdb_residues, label):
+    """Mapa {resid_interno_MDAnalysis: (resid_pdb, resname_pdb)} por posição."""
+    internal_resids = sorted(set(int(r) for r in atomgroup.resids))
+    if len(internal_resids) != len(pdb_residues):
+        raise SystemExit(
+            f"ERRO: contagem de residuos do {label} nao bate "
+            f"(MDAnalysis={len(internal_resids)}, PDB={len(pdb_residues)})"
+        )
+    return dict(zip(internal_resids, pdb_residues))
+
+
+def residue_onehot(atomgroup, internal_resids):
+    """Retorna matriz esparsa n_atoms x n_res one-hot, na ordem de internal_resids."""
+    idx = {r: i for i, r in enumerate(internal_resids)}
     rows = np.arange(len(atomgroup))
     cols = np.array([idx[int(r)] for r in atomgroup.resids])
     data = np.ones(len(atomgroup), dtype=np.int32)
-    onehot = sparse.csr_matrix((data, (rows, cols)), shape=(len(atomgroup), len(resids)))
-    return resids, onehot
-
-
-def resname_by_resid(atomgroup, resids):
-    out = {}
-    for r in resids:
-        sel = atomgroup.select_atoms(f"resid {r}")
-        out[r] = sel.resnames[0] if len(sel) else "?"
-    return out
+    return sparse.csr_matrix((data, (rows, cols)), shape=(len(atomgroup), len(internal_resids)))
 
 
 def main():
@@ -64,28 +76,32 @@ def main():
     ap.add_argument("--complexo-pdb", required=True)
     ap.add_argument("--tpr", required=True)
     ap.add_argument("--xtc", required=True)
-    ap.add_argument("--ligand-chain", default="B")
     ap.add_argument("--cutoff", type=float, default=4.0,
                      help="Angstrom (default 4.0 = 0.4 nm, mesmo cutoff de ANALYSES)")
     ap.add_argument("--out-dir", default=".")
     args = ap.parse_args()
 
-    lig_first, lig_last = detect_ligand_range(args.complexo_pdb, args.ligand_chain)
-    print(f"[CONTACT_MAP] Ligante: residuos {lig_first}-{lig_last}", file=sys.stderr)
+    rec_pdb = read_chain_residues_ordered(args.complexo_pdb, "A")
+    lig_pdb = read_chain_residues_ordered(args.complexo_pdb, "B")
+    print(f"[CONTACT_MAP] Receptor (PDB): {len(rec_pdb)} residuos, "
+          f"Ligante (PDB): {len(lig_pdb)} residuos", file=sys.stderr)
 
     u = mda.Universe(args.tpr, args.xtc)
-    lig = u.select_atoms(f"resid {lig_first}-{lig_last} and not name H*")
-    rec = u.select_atoms(f"protein and not (resid {lig_first}-{lig_last}) and not name H*")
+    rec = u.select_atoms("moltype Protein_chain_A and not name H*")
+    lig = u.select_atoms("moltype Protein_chain_B and not name H*")
 
     if len(lig) == 0 or len(rec) == 0:
         raise SystemExit(f"ERRO: selecao vazia (lig={len(lig)} atomos, rec={len(rec)} atomos)")
 
-    rec_resids, rec_onehot = residue_onehot(rec)
-    lig_resids, lig_onehot = residue_onehot(lig)
-    rec_resname = resname_by_resid(rec, rec_resids)
-    lig_resname = resname_by_resid(lig, lig_resids)
+    rec_map = build_resid_map(rec, rec_pdb, "receptor")
+    lig_map = build_resid_map(lig, lig_pdb, "ligante")
+    rec_internal = sorted(rec_map)
+    lig_internal = sorted(lig_map)
 
-    n_res_rec, n_res_lig = len(rec_resids), len(lig_resids)
+    rec_onehot = residue_onehot(rec, rec_internal)
+    lig_onehot = residue_onehot(lig, lig_internal)
+
+    n_res_rec, n_res_lig = len(rec_internal), len(lig_internal)
     contact_counts = np.zeros((n_res_rec, n_res_lig), dtype=np.int64)
 
     n_frames = len(u.trajectory)
@@ -100,9 +116,11 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
+    # Rótulos na numeração REAL do PDB (não a interna do GROMACS)
+    rec_labels = [f"{rec_map[r][1]}{rec_map[r][0]}" for r in rec_internal]
+    lig_labels = [f"{lig_map[r][1]}{lig_map[r][0]}" for r in lig_internal]
+
     # ── contact_map.csv ────────────────────────────────────────────────────
-    rec_labels = [f"{rec_resname[r]}{r}" for r in rec_resids]
-    lig_labels = [f"{lig_resname[r]}{r}" for r in lig_resids]
     csv_path = os.path.join(args.out_dir, "contact_map.csv")
     with open(csv_path, "w") as fh:
         fh.write("residue," + ",".join(lig_labels) + "\n")
@@ -116,8 +134,8 @@ def main():
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     im = ax.imshow(freq, aspect='auto', cmap='viridis', vmin=0, vmax=1,
                     interpolation='nearest')
-    ax.set_xlabel("Ligand residue")
-    ax.set_ylabel("Receptor residue")
+    ax.set_xlabel("Ligand residue (numeração PDB)")
+    ax.set_ylabel("Receptor residue (numeração PDB)")
     ax.set_title("Receptor–Ligand Contact Frequency Map\n(fraction of frames, cutoff "
                   f"{args.cutoff/10:.1f} nm)")
     step_x = max(1, n_res_lig // 25)
@@ -141,10 +159,12 @@ def main():
     iface_path = os.path.join(args.out_dir, "interface_residues.csv")
     with open(iface_path, "w") as fh:
         fh.write("chain,resid,resname,max_contact_freq\n")
-        for r, m in zip(rec_resids, rec_max):
-            fh.write(f"receptor,{r},{rec_resname[r]},{m:.4f}\n")
-        for r, m in zip(lig_resids, lig_max):
-            fh.write(f"ligand,{r},{lig_resname[r]},{m:.4f}\n")
+        for r, m in zip(rec_internal, rec_max):
+            pdb_resid, pdb_resname = rec_map[r]
+            fh.write(f"receptor,{pdb_resid},{pdb_resname},{m:.4f}\n")
+        for r, m in zip(lig_internal, lig_max):
+            pdb_resid, pdb_resname = lig_map[r]
+            fh.write(f"ligand,{pdb_resid},{pdb_resname},{m:.4f}\n")
     print(f"[OK] {iface_path}", file=sys.stderr)
     print("Done.", file=sys.stderr)
 
