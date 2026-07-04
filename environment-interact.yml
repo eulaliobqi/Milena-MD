@@ -1,0 +1,31 @@
+# Ambiente Conda separado para análises de interação pós-MD
+# (mapa de contatos, perfil farmacofórico, fingerprint ProLIF)
+#
+# OBRIGATÓRIO: ambiente dedicado e leve, separado do md-gromacs — mesma
+# lição do plot-env (2026-07-02): nunca reinstalar numpy/matplotlib/pacotes
+# Python dentro do env científico grande (118+ pacotes, GROMACS/AmberTools),
+# risco real de corrupção silenciosa já ocorrido uma vez nesse projeto.
+#
+# Criação:
+#   mamba env create -f environment-interact.yml
+#
+# Verificação:
+#   mamba run -n interact-env python -c "import MDAnalysis, prolif, rdkit"
+
+name: interact-env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - mdanalysis>=2.0
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - seaborn
+  - pip
+  - pip:
+    - prolif
+    - rdkit

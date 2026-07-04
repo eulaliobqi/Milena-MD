@@ -16,6 +16,11 @@ include { STABILITY_FILTER  } from './modules/local/stability_filter/main.nf'
 include { CLUSTERING        } from './modules/local/clustering/main.nf'
 include { MMGBSA_ROBUST     } from './modules/local/mmgbsa_robust/main.nf'
 include { MMGBSA_INTERPRET  } from './modules/local/mmgbsa_interpret/main.nf'
+include { CONTACT_MAP           } from './modules/local/contact_map/main.nf'
+include { PHARMACOPHORE_PROFILE } from './modules/local/pharmacophore_profile/main.nf'
+include { PROLIF_FINGERPRINT    } from './modules/local/prolif_fingerprint/main.nf'
+include { FE_RERUN              } from './modules/local/fe_rerun/main.nf'
+include { FE_INTERPRET          } from './modules/local/fe_interpret/main.nf'
 include { PLOT              } from './modules/local/plot/main.nf'
 
 workflow {
@@ -111,6 +116,47 @@ workflow {
         .map { meta, csv, dat, decomp, report -> tuple(meta, csv, dat, decomp, report) }
 
     MMGBSA_INTERPRET(ch_mmgbsa_interpret_input)
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Análises exploratórias adicionais (mapa de contatos, perfil farmacofórico,
+    // fingerprint ProLIF, estimativa de energia livre/Kd) — todas independentes
+    // entre si e tolerantes a falha (errorStrategy 'ignore'), rodando sobre a
+    // porção pós-equilíbrio da trajetória (STABILITY_FILTER.out.stable), mesma
+    // usada para preparar o MM-GBSA. Nenhuma delas usa AmberTools/tleap/
+    // gmx_MMPBSA — decisão deliberada após 3 tentativas de fix nesse caminho
+    // (ver project_milena_md.md, sessão 2026-07-03/04).
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // CONTACT_MAP e PROLIF_FINGERPRINT precisam do complexo.pdb original (não
+    // do .tpr/.gro) porque o GROMACS não preserva chain ID — a detecção do
+    // intervalo de resíduos do ligante usa leitura direta da cadeia B do PDB,
+    // mesma técnica já usada em ANALYSES.
+    ch_interact_input = PREPARE_COMPLEX.out.complexo
+        .join(STABILITY_FILTER.out.stable, by: [0])
+        .map { meta, complexo_pdb, tpr, stable_xtc, ndx -> tuple(meta, complexo_pdb, tpr, stable_xtc) }
+
+    CONTACT_MAP(ch_interact_input)
+    PROLIF_FINGERPRINT(ch_interact_input)
+
+    ch_pharma_input = CONTACT_MAP.out.results
+        .map { meta, csv, png, iface_csv -> tuple(meta, iface_csv) }
+
+    PHARMACOPHORE_PROFILE(ch_pharma_input)
+
+    // FE_RERUN precisa da topologia (TOPOLOGY.out) + estrutura final da
+    // produção (PRODUCTION.out.checkpoint) para gerar um .tpr novo com
+    // energygrps Receptor/Ligante (não dá para adicionar isso a um .tpr já
+    // existente) + a subtrajetória já reduzida usada no MM-GBSA
+    // (CLUSTERING.out.for_mmgbsa, ~150 frames — mantém o rerun barato).
+    ch_fe_input = PRODUCTION.out.checkpoint
+        .join(TOPOLOGY.out.topology, by: [0])
+        .join(CLUSTERING.out.for_mmgbsa, by: [0])
+        .map { meta, md_gro, md_cpt, md_edr, cplx_gro, top, itps, tpr, mmgbsa_xtc, ndx ->
+            tuple(meta, md_gro, top, itps, mmgbsa_xtc, ndx)
+        }
+
+    FE_RERUN(ch_fe_input)
+    FE_INTERPRET(FE_RERUN.out.energy)
 
     // ── Plot final — painel composto (RMSD/RMSF/Rg/contatos/H-bonds/SASA +
     // tríade [+ MM-GBSA se disponível]).
