@@ -1,0 +1,2 @@
+sample_id,receptor,ligand,triad_1,triad_2,triad_3,triad_4
+dn1937-gore12t,/home/eulalio/gromacs/Milena-MD/data/DN1937-receptor.pdb,/home/eulalio/gromacs/Milena-MD/data/GORE12T-ligand-DN1937.pdb,69,114,212,206
