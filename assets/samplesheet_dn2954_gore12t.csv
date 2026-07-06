@@ -1,0 +1,2 @@
+sample_id,receptor,ligand,triad_1,triad_2,triad_3,triad_4
+dn2954-gore12t,/home/eulalio/gromacs/Milena-MD/data/DN2954-receptor.pdb,/home/eulalio/gromacs/Milena-MD/data/GORE12T-ligand-DN2954.pdb,79,126,222,216
