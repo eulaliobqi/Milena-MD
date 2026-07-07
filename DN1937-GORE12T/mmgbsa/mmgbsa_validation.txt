@@ -1,0 +1,63 @@
+=== Validação pré-MMGBSA: dn1937-gore12t ===
+Data: seg 06 jul 2026 05:59:02 -03
+
+--- Grupos em lig.ndx ---
+  0 System              : 94099 atoms
+  1 Protein             :  4348 atoms
+  2 Protein-H           :  2207 atoms
+  3 C-alpha             :   307 atoms
+  4 Backbone            :   921 atoms
+  5 MainChain           :  1230 atoms
+  6 MainChain+Cb        :  1476 atoms
+  7 MainChain+H         :  1533 atoms
+  8 SideChain           :  2815 atoms
+  9 SideChain-H         :   977 atoms
+ 10 Prot-Masses         :  4348 atoms
+ 11 non-Protein         : 89751 atoms
+ 12 Water               : 89628 atoms
+ 13 SOL                 : 89628 atoms
+ 14 non-Water           :  4471 atoms
+ 15 Ion                 :   123 atoms
+ 16 Water_and_ions      : 89751 atoms
+ 17 Ligante             :   860 atoms
+ 18 Receptor            :  3488 atoms
+OK: grupos 'Receptor' e 'Ligante' confirmados
+AVISO: não foi possível contar frames — usando estimativa
+Frames para MMGBSA: 100
+mmgbsa.in gerado com endframe=100
+bin_patch/tleap criado
+ERRO: FINAL_RESULTS_MMGBSA.dat não gerado
+--- Últimas 40 linhas do log ---
+[mmgbsa-env] PATH patch ativo
+[INFO   ] Starting gmx_MMPBSA 1.6.5
+[INFO   ] Command-line
+  gmx_MMPBSA -O -i mmgbsa.in -cs  -ct  -ci  -cg Receptor Ligante -o FINAL_RESULTS_MMGBSA.dat -eo mmgbsa_results.csv -deo decomp_results.csv -nogui
+
+[ERROR  ] MMPBSA_Error 
+
+Several args are duplicated in the command-line...
+Duplicated args: 
+	-cs  <---> -ct 
+	-cs  <---> -ci 
+
+Check the gmx_MMPBSA.log file to report the problem.
+  File "/home/eulalio/miniforge3/envs/mmgbsa-env/bin/gmx_MMPBSA", line 6, in <module>
+    sys.exit(gmxmmpbsa())
+             ^^^^^^^^^^^
+  File "/home/eulalio/miniforge3/envs/mmgbsa-env/lib/python3.11/site-packages/GMXMMPBSA/app.py", line 64, in gmxmmpbsa
+    app.get_cl_args(sys.argv[1:])
+  File "/home/eulalio/miniforge3/envs/mmgbsa-env/lib/python3.11/site-packages/GMXMMPBSA/main.py", line 863, in get_cl_args
+    utils._get_dup_args(args)
+  File "/home/eulalio/miniforge3/envs/mmgbsa-env/lib/python3.11/site-packages/GMXMMPBSA/utils.py", line 468, in _get_dup_args
+    GMXMMPBSA_ERROR('Several args are duplicated in the command-line...\n'
+  File "/home/eulalio/miniforge3/envs/mmgbsa-env/lib/python3.11/site-packages/GMXMMPBSA/exceptions.py", line 171, in __init__
+    raise exc('\n\n' + msg + '\n\nCheck the gmx_MMPBSA.log file to report the problem.')
+MMPBSA_Error: 
+
+Several args are duplicated in the command-line...
+Duplicated args: 
+	-cs  <---> -ct 
+	-cs  <---> -ci 
+
+Check the gmx_MMPBSA.log file to report the problem.
+Exiting. All files have been retained.

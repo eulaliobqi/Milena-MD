@@ -1,0 +1,6 @@
+=== PROLIF_FINGERPRINT ===
+[OK] Selecoes: ligante=860 atomos, receptor=3394 atomos
+[INFO] Rodando ProLIF sobre 7001 frames (stride=1)...
+[OK] ./prolif_fingerprint.csv (7001 frames x 141 interacoes)
+[OK] ./prolif_heatmap.png
+[MMGBSA-STYLE OK] ProLIF concluido com sucesso

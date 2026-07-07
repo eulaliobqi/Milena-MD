@@ -6,7 +6,6 @@
 .nextflow.log*
 work/
 results/
-DN773-GORE12T/
 
 # GROMACS outputs (large)
 *.xtc

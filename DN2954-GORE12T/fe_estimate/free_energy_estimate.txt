@@ -1,0 +1,36 @@
+=== Estimativa de Energia Livre de Ligacao (Interaction Entropy) ===
+
+*** APROXIMACAO -- LER ANTES DE USAR ***
+Energia de interacao Coulomb-SR + LJ-SR em vacuo (rerun do GROMACS
+com energygrps Receptor/Ligante) + correcao entropica via Interaction
+Entropy (Duan, Liu, Zhang, JACS 2016). NAO inclui termo de solvatacao
+implicita (PB/GB) -- nao e equivalente a um resultado de MM-GBSA/
+MM-PBSA rigoroso. Valido para comparacao RELATIVA entre isoformas da
+mesma serie calculadas pelo mesmo metodo, nao como valor absoluto de
+afinidade de ligacao.
+
+ESPERADO (nao e' bug): sem a blindagem do solvente, a eletrostatica em
+vacuo entre duas cadeias de proteina/peptideo tende a dar Delta_G/Kd em
+magnitude fisicamente exagerada (centenas de kJ/mol, Kd muito abaixo de
+qualquer faixa experimental) -- e exatamente por isso que MM-GBSA/MM-PBSA
+de verdade somam um termo de solvatacao implicita para cancelar a maior
+parte dessa eletrostatica. Sem esse termo aqui, so o RANKING relativo
+entre sistemas desta serie (calculados pelo mesmo metodo) e informativo
+-- o valor absoluto de Delta_G/Kd abaixo nao deve ser citado isoladamente.
+
+N. frames                    : 1167
+Temperatura                  : 300.0 K
+
+<Coul-SR>                    : -392.37 +/- 77.48 kJ/mol
+<LJ-SR>                      : -271.23 +/- 31.31 kJ/mol
+<Delta_E_MM> (Coul+LJ)        : -663.61 +/- 84.12 kJ/mol
+-T*Delta_S (Interaction Entropy) : 225.73 kJ/mol
+Delta_G estimado              : -437.87 kJ/mol (-104.65 kcal/mol)
+Kd estimado                   : 5.765e-77 (unidade molar relativa, ver nota)
+
+AVISO: desvio padrao da energia de interacao e' > 10 kT (33.7 kT) -- o metodo Interaction Entropy e' conhecido por ficar numericamente instavel/superestimar a entropia nesse regime (ver ressalva metodologica em docs/frontier-tech-roadmap.md, secao 3). Tratar o -TdS como qualitativo, nao quantitativo, neste caso.
+
+Nota sobre Kd: derivado algebricamente de Delta_G = R*T*ln(Kd) usando
+o mesmo R*T da correcao IE acima -- herda toda a aproximacao do
+Delta_G (sem solvatacao explicita), nao deve ser reportado como Kd
+experimental ou como substituto de um ensaio de afinidade real.
