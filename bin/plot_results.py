@@ -123,12 +123,12 @@ def plot_line(ax, data, ylabel, color, title=None, hline=None,
     ax.grid(alpha=0.25)
 
 
-def plot_rmsf(ax, data):
+def plot_rmsf(ax, data, lig_len=75):
     if data is None:
         _missing(ax); return
     ax.bar(data[:, 0], data[:, 1], width=1.0, color='seagreen', alpha=0.8)
-    ax.bar(data[-5:, 0], data[-5:, 1], width=1.0, color='crimson',
-           label='Ligand (last 5)')
+    ax.bar(data[-lig_len:, 0], data[-lig_len:, 1], width=1.0, color='crimson',
+           label=f'Ligand (last {lig_len} aa)')
     ax.legend()
     ax.set_xlabel("Residue")
     ax.set_ylabel("RMSF (nm)")
@@ -285,6 +285,8 @@ def main():
     ap.add_argument("--window-ns", type=float, default=5.0,
                     help="Rolling window in ns (default: 5.0)")
     ap.add_argument("--mmgbsa-csv", default=None)
+    ap.add_argument("--lig-len",   type=int, default=75,
+                    help="Peptide ligand length in residues (default: 75, GORE12T)")
     ap.add_argument("--output",    default="painel_completo.png")
     args = ap.parse_args()
 
@@ -332,7 +334,7 @@ def main():
               "Ligand RMSD (peptide)", window_ns=wns)
 
     # ── Linha 2: RMSF + Rg ────────────────────────────────────────────────────
-    plot_rmsf(axes[1, 0], xvg["rmsf"])
+    plot_rmsf(axes[1, 0], xvg["rmsf"], lig_len=args.lig_len)
     plot_line(axes[1, 1], xvg["rg"],       "Rg (nm)",   "purple",
               "Radius of Gyration", window_ns=wns)
 
@@ -391,7 +393,7 @@ def main():
 
     if xvg["rmsf"] is not None:
         fig, ax = plt.subplots(figsize=(9, 5))
-        plot_rmsf(ax, xvg["rmsf"])
+        plot_rmsf(ax, xvg["rmsf"], lig_len=args.lig_len)
         plt.tight_layout()
         plt.savefig(os.path.join(D, "rmsf.png"), dpi=150, bbox_inches='tight')
         plt.close()
