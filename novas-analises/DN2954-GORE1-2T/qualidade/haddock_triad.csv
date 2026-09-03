@@ -1,0 +1,6 @@
+par,distancia_A,status
+His-NE2...Ser-OG,4.01,OK (<=4.5A)
+His-ND1...Asp-OD1,2.73,OK (<=4.5A)
+His-ND1...Asp-OD2,2.83,OK (<=4.5A)
+Ser-OG...Asp216-OD1,11.27,"DISTANTE (>4.5A, revisar pose)"
+Ser-OG...Asp216-OD2,11.28,"DISTANTE (>4.5A, revisar pose)"

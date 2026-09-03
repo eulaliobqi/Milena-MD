@@ -1,0 +1,36 @@
+run_dir = "run1-guided"
+
+ncores = 12
+mode = "local"
+
+molecules = [
+    "/home/eulalio/gromacs/Milena-MD/novas-analises/data/DN2954-receptor_clean.pdb",
+    "/home/eulalio/gromacs/Milena-MD/novas-analises/DN2954-GORE1-2T/haddock/gore1-2t_ensemble.pdb"
+]
+
+[topoaa]
+
+[rigidbody]
+ambig_fname = "/home/eulalio/gromacs/Milena-MD/novas-analises/DN2954-GORE1-2T/haddock/ambig.tbl"
+sampling = 1000
+
+[caprieval]
+
+[seletop]
+select = 200
+
+[flexref]
+ambig_fname = "/home/eulalio/gromacs/Milena-MD/novas-analises/DN2954-GORE1-2T/haddock/ambig.tbl"
+
+[caprieval]
+
+[emref]
+ambig_fname = "/home/eulalio/gromacs/Milena-MD/novas-analises/DN2954-GORE1-2T/haddock/ambig.tbl"
+
+[caprieval]
+
+[clustfcc]
+
+[seletopclusts]
+
+[caprieval]

@@ -1,0 +1,3 @@
+label,pdb,delta_g_kcal_mol,kd_M_25C,status,caveat
+haddock,DN2954-GORE1-2T-GGS3/protonacao_ph8.2/haddock_gore1-2t-ggs3_ph8.2.pdb,-6.6,1.4e-05,OK,PRODIGY calibrado em proteina-proteina estruturada; peptideo curto/nao-globular fora do regime validado
+boltz_model0,DN2954-GORE1-2T-GGS3/protonacao_ph8.2/boltz_gore1-2t-ggs3_model0_ph8.2.pdb,-11.2,5.9e-09,OK,PRODIGY calibrado em proteina-proteina estruturada; peptideo curto/nao-globular fora do regime validado
