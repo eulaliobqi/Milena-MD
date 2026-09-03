@@ -164,7 +164,15 @@ interface (ipTM) mais alta e mais estável entre amostras (0,81/0,83/
 0,67) do que o construto ligado GORE1-2T(GGS)3 (0,73/0,58/0,46)** —
 consistente com a maior flexibilidade conformacional esperada de um
 peptídeo 75 aa com três espaçadores `(GGS)3` frente a um peptídeo
-curto de 21 aa.
+curto de 21 aa. Visualmente, as poses HADDOCK e Boltz-2 ocupam a mesma
+região da tripsina para os dois peptídeos, ancoradas junto à tétrade
+catalítica (Fig. 7a-b). Para o GORE1-2T(GGS)3, a pose HADDOCK completa
+(sem recorte de câmera, Fig. 7c) mostra o conformero hélice-α do
+ensemble de entrada preservado quase reto ao longo de toda a cadeia de
+75 aa (~110 Å) — só a extremidade N-terminal faz contato com o
+receptor; a cauda distal não tem suporte experimental de conformação e
+não deve ser tratada como pose validada na preparação da topologia de
+MD (seção 2.7).
 
 ### 2.3 A tétrade catalítica permanece geometricamente intacta em todas as 8 poses avaliadas
 
@@ -254,7 +262,16 @@ artefato de pose, não achado biológico. **Decisão para a próxima etapa
 (dinâmica molecular em triplicata):** usar a pose Boltz-2 (`model_0`)
 como estrutura inicial de MD para o sistema GORE1-2T; caso a pose
 HADDOCK seja usada por algum motivo, His79 deve ser forçada a estado
-neutro (HID/HIE) na preparação da topologia.
+neutro (HID/HIE) na preparação da topologia. Segunda ressalva
+identificada pela renderização estrutural (Fig. 7c): a pose HADDOCK do
+GORE1-2T(GGS)3 manteve o conformero hélice-α de entrada quase reto por
+toda a cadeia de 75 aa, sem quebra nos espaçadores `(GGS)3` — apenas a
+região N-terminal tem contato com o receptor e suporte da restrição
+AIR; a cauda distal (~2/3 da cadeia) não deve ser usada como pose
+validada. **Decisão:** para o GORE1-2T(GGS)3, também preferir a pose
+Boltz-2 como estrutura inicial de MD, ou, se a pose HADDOCK for usada,
+reequilibrar/relaxar a cauda distal do peptídeo antes da produção
+(não iniciar a MD direto dessa geometria estendida).
 
 ---
 
@@ -306,6 +323,22 @@ resíduos de maior frequência de contato na MD de 100 ns de
 `DN2954-GORE12T` (`analise_extra/interface_residues.csv`,
 `max_contact_freq`), por sistema e método de docking. Linha tracejada
 = tamanho total do conjunto de referência (n=20).
+
+**Fig. 7 — Poses consenso (HADDOCK3 padrão-ouro vs. Boltz-2 fronteira,
+model_0), renderização estrutural.** PyMOL 3.1.0, cadeia A (receptor)
+de cada pose superposta rigidamente (`cmd.align`) sobre
+`data/DN2954-receptor.pdb`; tétrade catalítica em verde (sticks).
+**(a)** DN2954 × GORE1-2T (21 aa) e **(b)** DN2954 ×
+GORE1-2T(GGS)3 (75 aa): mesma câmera/escala nos dois painéis, receptor
+inteiro + peptídeo até 15 Å da superfície do receptor — nos dois
+sistemas e pelos dois métodos, o peptídeo converge sobre a mesma
+região da tétrade. **(c)** Pose HADDOCK completa do GORE1-2T(GGS)3, sem
+o recorte de câmera de (b): a hélice-α de entrada permanece quase reta
+por toda a cadeia de 75 aa (~110 Å), com a extremidade N-terminal
+apenas em contato com o receptor — achado reportado, não omitido, como
+ressalva para a etapa de MD (seção 2.7). Script de renderização:
+`scripts/render_consensus_poses.py` (executado no servidor, ambiente
+`structure`); composição: `scripts/make_fig7_consensus_poses.py`.
 
 ## Referências
 
@@ -363,3 +396,8 @@ Comparação detalhada com a MD anterior:
 `novas-analises/comparativo_vs_DN2954-GORE12T.md`. Figuras (PDF+PNG
 600dpi, com manifesto `.export.json`) e script gerador:
 `novas-analises/figuras/`, `novas-analises/scripts/make_figures_pub.py`.
+Fig. 7 (poses consenso, renderização estrutural): script PyMOL
+`novas-analises/scripts/render_consensus_poses.py` (roda no servidor,
+ambiente `structure`, produz `figuras/_render/consensus_*.png`) +
+script de composição `novas-analises/scripts/make_fig7_consensus_poses.py`
+(roda localmente, aplica autocrop + estilo `scientific-visualization`).
