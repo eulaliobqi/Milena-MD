@@ -107,8 +107,18 @@ workflow {
     // CLUSTERING espera: meta, md_tpr, stable_xtc, lig_ndx
     CLUSTERING(STABILITY_FILTER.out.stable)
 
-    // MMGBSA_ROBUST espera: meta, md_tpr, mmgbsa_xtc, lig_ndx
-    MMGBSA_ROBUST(CLUSTERING.out.for_mmgbsa)
+    // MMGBSA_ROBUST espera: meta, md_tpr, mmgbsa_xtc, lig_ndx, topol.top, itps
+    // -- gmx_MMPBSA em modo GROMACS exige -cp (a topologia .top texto, não só
+    // o .tpr binário) -- por isso junta BOX_SOLVATE_IONS.out.system aqui,
+    // mesma topologia pós-solvatação que FE_RERUN usa mais abaixo (ver nota
+    // lá sobre por quê NÃO é a de TOPOLOGY).
+    ch_mmgbsa_input = CLUSTERING.out.for_mmgbsa
+        .join(BOX_SOLVATE_IONS.out.system, by: [0])
+        .map { meta, tpr, mmgbsa_xtc, ndx, ions_gro, top, itps ->
+            tuple(meta, tpr, mmgbsa_xtc, ndx, top, itps)
+        }
+
+    MMGBSA_ROBUST(ch_mmgbsa_input)
 
     // MMGBSA_INTERPRET espera: meta, mmgbsa_csv, mmgbsa_dat, decomp_csv, stability_report
     ch_mmgbsa_interpret_input = MMGBSA_ROBUST.out.results
