@@ -24,19 +24,24 @@ RENAME_AMBER = {
 }
 
 # PDB2PQR (--ff AMBER) → CHARMM36: PDB2PQR só sabe emitir nomenclatura
-# AMBER-flavored (não tem --ffout CHARMM utilizável aqui), então o mapeamento
-# de saida tem que pular direto de HISD/E/H (pdb2pqr) pro nome CHARMM final
-# -- e também reescrever CYX (que O PRÓPRIO pdb2pqr já emite pra dissulfeto
-# em --ff AMBER, antes mesmo deste script rodar) pra CYS2, já que "CYX" não
-# existe no .rtp CHARMM (confirmado em produção: grompp abortou com "Residue
-# 'HIE' not found" na 1a tentativa CHARMM36 -- história completa no commit
-# que introduziu --ff-style; CYX seria o próximo a quebrar do mesmo jeito).
+# AMBER-flavored (não tem --ffout CHARMM utilizável aqui). Mapeia pro nome
+# CHARMM final -- cobre AMBIGUAS as duas formas que pdb2pqr pode emitir:
+# verificado empiricamente (2026-09-04, receptor DN2954/charmm36) que ele
+# escreve o nome AMBER FINAL direto (HID/HIE, não a forma intermediária
+# HISD/HISE que o dict original assumia sem checar) -- por isso as chaves
+# HID/HIE/HIP também estão aqui, não só HISD/HISE/HISH. ASPH/GLUH nunca
+# apareceram num teste real (sistema sem ASP/GLU protonado em pH 8.2), mas
+# ambas as formas ficam cobertas por segurança. CYX (que o PRÓPRIO pdb2pqr
+# já emite pra dissulfeto em --ff AMBER, antes deste script rodar) -> CYS2,
+# já que "CYX" não existe no .rtp CHARMM (confirmado em produção: grompp
+# abortou com "Residue 'HIE' not found" na 1a tentativa CHARMM36 -- história
+# completa no commit que introduziu --ff-style).
 RENAME_CHARMM = {
-    'HISD': 'HSD',
-    'HISE': 'HSE',
-    'HISH': 'HSP',
-    'ASPH': 'ASPP',
-    'GLUH': 'GLUP',
+    'HISD': 'HSD', 'HID': 'HSD',
+    'HISE': 'HSE', 'HIE': 'HSE',
+    'HISH': 'HSP', 'HIP': 'HSP',
+    'ASPH': 'ASPP', 'ASH': 'ASPP',
+    'GLUH': 'GLUP', 'GLH': 'GLUP',
     'CYX':  'CYS2',
 }
 
