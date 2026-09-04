@@ -46,15 +46,34 @@ def detect_disulfides(records, dist_cutoff=2.5):
     return bonded
 
 
-def his_form_for_pH(pH):
-    """Forma de protonacao da His para um dado pH (pKa His ~ 6)."""
-    if pH < 6.5:  return "HIP"   # protonada (ambos N protonados)
-    if pH < 8.0:  return "HID"   # neutra, H em N-delta
-    return "HIE"                 # neutra, H em N-epsilon (acima do pKa, mais comum)
+#  amber99sb-ildn (.rtp): HID/HIE/HIP (delta/epsilon/dupla-protonacao) e
+#  CYX pra cisteina em ponte dissulfeto.
+#  charmm36-feb2026_cgenff-5.0 (.rtp): mesmos 3 estados de protonacao da
+#  His mas nomeados HSD/HSE/HSP, e CYS2 (nao CYX) pra dissulfeto -- nomes
+#  AMBER simplesmente nao existem no banco de residuos CHARMM (confirmado
+#  em producao: grompp abortou com "Residue 'HIE' not found in residue
+#  topology database" na 1a tentativa CHARMM36, ver commit que introduziu
+#  --ff-style).
+HIS_FORMS = {
+    "amber":  {"HIP": "HIP", "HID": "HID", "HIE": "HIE"},
+    "charmm": {"HIP": "HSP", "HID": "HSD", "HIE": "HSE"},
+}
+SS_RESNAME = {"amber": "CYX", "charmm": "CYS2"}
 
 
-def preprocess_receptor(records, cys_disulfide, his_form):
-    """CYX nas pontes dissulfeto + HIS -> forma escolhida."""
+def his_form_for_pH(pH, ff_style):
+    """Forma de protonacao da His para um dado pH (pKa His ~ 6), nomeada
+    conforme a convencao de residuos da forca de campo alvo."""
+    forms = HIS_FORMS[ff_style]
+    if pH < 6.5:  return forms["HIP"]   # protonada (ambos N protonados)
+    if pH < 8.0:  return forms["HID"]   # neutra, H em N-delta
+    return forms["HIE"]                 # neutra, H em N-epsilon (acima do pKa, mais comum)
+
+
+def preprocess_receptor(records, cys_disulfide, his_form, ff_style):
+    """Renomeia CYS em ponte dissulfeto + HIS -> forma escolhida, usando a
+    nomenclatura de residuo da forca de campo alvo (ver SS_RESNAME/HIS_FORMS)."""
+    ss_resname = SS_RESNAME[ff_style]
     out = []
     for line in records:
         rn = int(line[22:26])
@@ -62,10 +81,15 @@ def preprocess_receptor(records, cys_disulfide, his_form):
         aname = line[12:16].strip()
         if rn in cys_disulfide and aname == "HG":
             continue   # remove HG das CYS dissulfeto
+        # Campo do nome do residuo: colunas 18-21 (4 chars, line[17:21]), nao
+        # 18-20 (3 chars) -- CYS2 (CHARMM, dissulfeto) tem 4 letras e nao
+        # cabe no campo padrao de 3. A coluna 21 e' espaco em branco no PDB
+        # estrito (antes do chain ID em 22), entao usar as 4 colunas aqui
+        # nao desloca nada -- so preenche o padding que ja existia.
         if rname == "CYS" and rn in cys_disulfide:
-            line = line[:17] + "CYX" + line[20:]
+            line = line[:17] + f"{ss_resname:<4s}" + line[21:]
         if rname == "HIS":
-            line = line[:17] + his_form + line[20:]
+            line = line[:17] + f"{his_form:<4s}" + line[21:]
         out.append(line)
     return out
 
@@ -75,16 +99,20 @@ def rewrite_atom(line, serial, chain, resseq):
     record  = line[0:6]
     aname   = line[12:16]
     altLoc  = line[16:17]
-    rname   = line[17:20]
+    # Nome do residuo: colunas 18-21 (4 chars) -- CYS2 (CHARMM, dissulfeto)
+    # precisa das 4; coluna 21 e' padding em branco no PDB estrito quando o
+    # nome tem so 3 letras, entao ler/escrever 4 aqui nao muda nada pros
+    # outros casos (ver preprocess_receptor).
+    rname   = line[17:21]
     x = line[30:38]; y = line[38:46]; z = line[46:54]
     occ = line[54:60] if len(line) >= 60 else "  1.00"
     bf  = line[60:66] if len(line) >= 66 else "  0.00"
     el  = line[76:78] if len(line) >= 78 else "  "
     if occ.strip() in ("", "0.00"): occ = "  1.00"
     if bf.strip() == "": bf = "  0.00"
-    return ("{:<6s}{:>5d} {:<4s}{:<1s}{:<3s} {:<1s}{:>4d}    "
+    return ("{:<6s}{:>5d} {:<4s}{:<1s}{:<4s}{:<1s}{:>4d}    "
             "{:>8s}{:>8s}{:>8s}{:>6s}{:>6s}          {:>2s}").format(
-        record, serial, aname, altLoc, rname, chain, resseq, x, y, z, occ, bf, el)
+        record, serial, aname, altLoc, rname.strip().ljust(4), chain, resseq, x, y, z, occ, bf, el)
 
 
 def reorder(records, chain, start, offset=0):
@@ -113,6 +141,10 @@ def main():
     ap.add_argument("--out-dir",  default="prep", help="diretorio de saida")
     ap.add_argument("--ss-cutoff", type=float, default=2.5,
                     help="cutoff distancia SG-SG (A) para detectar S-S (default 2.5)")
+    ap.add_argument("--ff-style", choices=["amber", "charmm"], default="amber",
+                    help="convencao de nomes de residuo (His/dissulfeto) da "
+                         "forca de campo alvo: amber=HID/HIE/HIP+CYX, "
+                         "charmm=HSD/HSE/HSP+CYS2 (default amber)")
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -126,10 +158,10 @@ def main():
     cys_ss = detect_disulfides(rec_raw, args.ss_cutoff)
     print(f"    CYS em S-S detectadas: {sorted(cys_ss)}")
 
-    his_form = his_form_for_pH(args.pH)
-    print(f"[3] Forma da His para pH {args.pH}: {his_form}")
+    his_form = his_form_for_pH(args.pH, args.ff_style)
+    print(f"[3] Forma da His para pH {args.pH} ({args.ff_style}): {his_form}")
 
-    rec = preprocess_receptor(rec_raw, cys_ss, his_form)
+    rec = preprocess_receptor(rec_raw, cys_ss, his_form, args.ff_style)
 
     # Ligante
     print(f"[4] Lendo ligante: {args.ligante}  (pose docada preservada)")
@@ -152,8 +184,8 @@ def main():
     out_cpx = os.path.join(args.out_dir, "complexo.pdb")
 
     write_pdb(out_rec, rec_out,
-              [f"REMARK   Receptor pre-processado para pH {args.pH}",
-               f"REMARK   {his_form} para HIS, CYX em pontes S-S: {sorted(cys_ss)}"])
+              [f"REMARK   Receptor pre-processado para pH {args.pH} ({args.ff_style})",
+               f"REMARK   {his_form} para HIS, {SS_RESNAME[args.ff_style]} em pontes S-S: {sorted(cys_ss)}"])
     write_pdb(out_lig, lig_out,
               ["REMARK   Ligante peptidico - pose docada original preservada"])
     with open(out_cpx, "w") as f:
