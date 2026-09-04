@@ -14,6 +14,12 @@ process NPT {
     def gpu_flags = params.use_gpu ? "-nb gpu -pme gpu -bonded gpu -gpu_id ${params.gpu_id}" : ""
     def mpi       = params.mpi_cmd ?: ""
     def temp      = params.temperature
+    // CHARMM36 exige vdW com switching (Force-switch); Cut-off simples é
+    // o protocolo recomendado só p/ AMBER (ver minimization/main.nf).
+    def is_charmm = params.forcefield.toString().startsWith('charmm36')
+    def vdw_block = is_charmm
+        ? "vdwtype         = Force-switch\nvdw-modifier    = Force-switch\nrvdw-switch     = 1.0\nrvdw            = 1.2\nDispCorr        = no"
+        : "vdwtype         = Cut-off\nrvdw            = 1.2"
     """
     cp ${top} topol.top
     cp itp_in/*.itp .
@@ -30,8 +36,7 @@ cutoff-scheme   = Verlet
 nstlist         = 20
 coulombtype     = PME
 rcoulomb        = 1.2
-vdwtype         = Cut-off
-rvdw            = 1.2
+${vdw_block}
 constraints     = h-bonds
 constraint-algorithm = LINCS
 continuation    = yes

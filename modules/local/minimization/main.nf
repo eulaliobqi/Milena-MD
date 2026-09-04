@@ -11,14 +11,22 @@ process MINIMIZATION {
     tuple val(meta), path("em.gro"), path("topol.top"), path("*.itp"), emit: system
 
     script:
-    // steep NÃO suporta PME GPU → usa apenas -nb gpu (sem -pme gpu)
+    // steep/cg NÃO suportam PME GPU → usa apenas -nb gpu (sem -pme gpu)
     def gpu_flags = params.use_gpu ? "-nb gpu -gpu_id ${params.gpu_id}" : ""
     def mpi       = params.mpi_cmd  ?: ""
+    // CHARMM36 exige vdW com switching (Force-switch, rvdw-switch=1.0-1.2 nm,
+    // sem DispCorr) -- Cut-off simples é o protocolo recomendado só p/ AMBER.
+    def is_charmm = params.forcefield.toString().startsWith('charmm36')
+    def vdw_block = is_charmm
+        ? "vdwtype         = Force-switch\nvdw-modifier    = Force-switch\nrvdw-switch     = 1.0\nrvdw            = 1.2\nDispCorr        = no"
+        : "vdwtype         = Cut-off\nrvdw            = 1.2"
     """
     cp ${top} topol.top
     cp itp_in/*.itp .
 
-    cat > em.mdp << 'MDP_EOF'
+    # Estágio 1: steepest descent até emtol frouxo ou nsteps -- remove clashes
+    # graves rápido, mas converge devagar perto do mínimo.
+    cat > em_steep.mdp << MDP_EOF
 integrator      = steep
 emtol           = 1000.0
 emstep          = 0.01
@@ -27,19 +35,43 @@ cutoff-scheme   = Verlet
 nstlist         = 10
 coulombtype     = PME
 rcoulomb        = 1.2
-vdwtype         = Cut-off
-rvdw            = 1.2
+${vdw_block}
 pbc             = xyz
 MDP_EOF
 
     ${params.gmx_cmd} grompp \\
-        -f em.mdp -c ${ions_gro} \\
-        -p topol.top -o em.tpr \\
+        -f em_steep.mdp -c ${ions_gro} \\
+        -p topol.top -o em_steep.tpr \\
         -maxwarn ${params.maxwarn}
 
     ${mpi} ${params.gmx_cmd} mdrun \\
-        -v -deffnm em \\
+        -v -deffnm em_steep \\
         -ntomp ${params.ntomp} \\
         -pin on ${gpu_flags}
+
+    # Estágio 2: conjugate gradient a partir do steep, emtol mais apertado --
+    # cg converge melhor que steep perto do mínimo local (protocolo rigoroso).
+    cat > em_cg.mdp << MDP_EOF
+integrator      = cg
+emtol           = 100.0
+nsteps          = 50000
+cutoff-scheme   = Verlet
+nstlist         = 10
+coulombtype     = PME
+rcoulomb        = 1.2
+${vdw_block}
+pbc             = xyz
+MDP_EOF
+
+    ${params.gmx_cmd} grompp \\
+        -f em_cg.mdp -c em_steep.gro \\
+        -p topol.top -o em_cg.tpr \\
+        -maxwarn ${params.maxwarn}
+
+    ${params.gmx_cmd} mdrun \\
+        -v -deffnm em_cg \\
+        -ntomp ${params.ntomp}
+
+    cp em_cg.gro em.gro
     """
 }

@@ -27,6 +27,10 @@ __pycache__/
 # Backups locais de resultados (regeneráveis via pipeline)
 /analise/
 
+# Força de campo externa (charmm36* etc.) -- ~18 MB, baixada/copiada uma vez
+# no servidor (ver params.forcefield_dir em nextflow.config), não versionada
+/ff/
+
 # Manter inputs e scripts
 !*.pdb
 !*.py
