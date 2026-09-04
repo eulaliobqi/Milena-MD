@@ -21,6 +21,15 @@ select = 200
 
 [flexref]
 ambig_fname = "/home/eulalio/gromacs/Milena-MD/novas-analises/DN2954-GORE1-2T/haddock/ambig.tbl"
+# Correcao (2026-09-03): deteccao automatica de flexibilidade (nseg2=-1, default)
+# so libera residuos do peptideo proximos da interface -- para um peptideo de
+# 21 aa sem estrutura previa isso deixava a cadeia inteira presa no conformero
+# rigido de entrada (RMSD ~0.4 A vs a helice do ensemble, nenhum refinamento
+# real). Forca o peptideo inteiro (molecula 2, resi 1-21) como segmento
+# semi-flexivel, para o SA de flexref de fato reamostrar o backbone.
+nseg2 = 1
+seg_sta_2_1 = 1
+seg_end_2_1 = 21
 
 [caprieval]
 

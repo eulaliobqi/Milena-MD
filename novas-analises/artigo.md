@@ -170,9 +170,24 @@ catalítica (Fig. 7a-b). Para o GORE1-2T(GGS)3, a pose HADDOCK completa
 (sem recorte de câmera, Fig. 7c) mostra o conformero hélice-α do
 ensemble de entrada preservado quase reto ao longo de toda a cadeia de
 75 aa (~110 Å) — só a extremidade N-terminal faz contato com o
-receptor; a cauda distal não tem suporte experimental de conformação e
-não deve ser tratada como pose validada na preparação da topologia de
-MD (seção 2.7).
+receptor. Investigação dirigida (RMSD de backbone, ver
+`comparativo_vs_DN2954-GORE12T.md` seção 7) identificou a causa: o
+`[flexref]` do HADDOCK3 detecta automaticamente a zona semi-flexível
+pelo contato com o receptor, deixando a maior parte de um peptídeo sem
+estrutura prévia congelada no conformero rígido de entrada (RMSD
+0,38–0,43 Å vs. a hélice ideal, nos dois sistemas). Reconfigurar
+`[flexref]` para tratar o peptídeo inteiro como semi-flexível e
+reprocessar a partir dessa etapa (`--restart 4`, reaproveitando o
+rigidbody já calculado) preservou o `HADDOCK score` (estatisticamente
+idêntico) mas **não** alterou a conformação — o peptídeo continuou
+essencialmente na mesma hélice (RMSD 0,41–0,75 Å), só reposicionada.
+Conclusão: não é um parâmetro mal ajustado, é um limite de escopo do
+`flexref` (refinamento local em rajadas curtas de SA, não uma
+ferramenta de predição de fold) — ele não consegue desfazer uma
+α-hélice já formada. A cauda distal do GGS3 não tem suporte
+experimental de conformação em nenhuma das duas rodadas HADDOCK e não
+deve ser tratada como pose validada na preparação da topologia de MD
+(seção 2.7).
 
 ### 2.3 A tétrade catalítica permanece geometricamente intacta em todas as 8 poses avaliadas
 
@@ -262,16 +277,24 @@ artefato de pose, não achado biológico. **Decisão para a próxima etapa
 (dinâmica molecular em triplicata):** usar a pose Boltz-2 (`model_0`)
 como estrutura inicial de MD para o sistema GORE1-2T; caso a pose
 HADDOCK seja usada por algum motivo, His79 deve ser forçada a estado
-neutro (HID/HIE) na preparação da topologia. Segunda ressalva
-identificada pela renderização estrutural (Fig. 7c): a pose HADDOCK do
-GORE1-2T(GGS)3 manteve o conformero hélice-α de entrada quase reto por
-toda a cadeia de 75 aa, sem quebra nos espaçadores `(GGS)3` — apenas a
-região N-terminal tem contato com o receptor e suporte da restrição
-AIR; a cauda distal (~2/3 da cadeia) não deve ser usada como pose
-validada. **Decisão:** para o GORE1-2T(GGS)3, também preferir a pose
-Boltz-2 como estrutura inicial de MD, ou, se a pose HADDOCK for usada,
-reequilibrar/relaxar a cauda distal do peptídeo antes da produção
-(não iniciar a MD direto dessa geometria estendida).
+neutro (HID/HIE) na preparação da topologia. Segunda ressalva,
+identificada pela renderização estrutural (Fig. 7c) e investigada até a
+causa raiz (seção 2.2): a pose HADDOCK do GORE1-2T(GGS)3 mantém o
+conformero hélice-α de entrada quase reto por toda a cadeia de 75 aa,
+mesmo após reconfigurar o `flexref` para tratar o peptídeo inteiro como
+semi-flexível e reprocessar a partir dessa etapa — o `HADDOCK score` não
+mudou, só a orientação da hélice em relação ao receptor. Confirmado:
+`flexref` é um refinamento local (SA de torção em rajadas curtas), não
+uma ferramenta de predição de fold, e não tem como desfazer uma α-hélice
+já formada. O Boltz-2, por ser um modelo de co-folding real, é a única
+fonte disponível de hipótese de conformação para a cadeia inteira —
+reprodutível para o GGS3 (3/3 amostras convergem em fold compacto de
+~16 Å) e explicitamente **não** reprodutível para o GORE1-2T (3
+amostras divergem entre si, pLDDT<60 nas três). **Decisão:** usar a
+pose Boltz-2 como estrutura inicial de MD nos dois sistemas; para o
+GORE1-2T, tratar a conformação livre do peptídeo como incerteza real a
+esclarecer pela própria MD de produção (por exemplo comparando as
+réplicas da triplicata), não como algo já resolvido pelo docking.
 
 ---
 
@@ -401,3 +424,13 @@ Fig. 7 (poses consenso, renderização estrutural): script PyMOL
 ambiente `structure`, produz `figuras/_render/consensus_*.png`) +
 script de composição `novas-analises/scripts/make_fig7_consensus_poses.py`
 (roda localmente, aplica autocrop + estilo `scientific-visualization`).
+Divergência de conformação HADDOCK vs. Boltz-2 (seção 2.2/2.7, detalhe em
+`comparativo_vs_DN2954-GORE12T.md` seção 7): números reproduzidos por
+`novas-analises/scripts/diagnose_pose_divergence.py`, sobre os PDBs em
+`novas-analises/diagnostico_divergencia_pose/` (conformeros de entrada do
+ensemble, amostras Boltz-2, pose HADDOCK reprocessada com `flexref`
+cobrindo o peptídeo inteiro). Configuração corrigida do HADDOCK3:
+`novas-analises/DN2954-GORE1-2T{,-GGS3}/haddock/run_dn2954-gore1-2t{,-ggs3}.toml`
+(`[flexref] nseg2=1`); run original preservado em
+`haddock/run1-guided_orig_frozen-peptide/` em cada sistema (não usado
+downstream — decisão registrada foi adotar a pose Boltz-2 para a MD).

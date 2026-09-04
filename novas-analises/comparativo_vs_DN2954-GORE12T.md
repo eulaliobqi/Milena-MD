@@ -144,20 +144,88 @@ comparação de afinidade válida aqui é de **ranking/direção**, não de
 magnitude: nenhum dos dois métodos novos contradiz a existência de uma
 interação favorável (ΔG negativo em todos os casos).
 
+## 7. Divergência de conformação do peptídeo entre HADDOCK3 e Boltz-2
+
+A renderização estrutural (Fig. 7) expôs uma divergência muito maior do
+que a diferença "mesma região, pose ligeiramente diferente" discutida
+nas seções 2 e 5: para o GORE1-2T(GGS)3, o HADDOCK3 devolve uma hélice-α
+quase reta de ~115 Å (75 aa), enquanto o Boltz-2 devolve um fold
+compacto de ~16 Å ponta-a-ponta. Investigação direta (medição de
+RMSD/distância, não impressão visual):
+
+- **Causa raiz identificada:** o backbone da `best_pose_haddock.pdb`
+  (ambos os sistemas) tem RMSD de apenas 0,38–0,43 Å contra o conformero
+  hélice-α de entrada (`build_peptide_ensemble.py`) — ou seja, o
+  `flexref` do HADDOCK3 essencialmente não alterou o peptídeo. Motivo:
+  `nseg2 = -1` (default) detecta a "zona semi-flexível" automaticamente
+  a partir do contato com o receptor; como a maior parte de um peptídeo
+  de 21–75 aa sem estrutura prévia nunca toca o receptor em nenhum
+  modelo do rigidbody, essa região fica classificada como rígida e nunca
+  é reamostrada.
+- **Reprodutibilidade do Boltz-2 como evidência indireta:** as 3
+  amostras de difusão do GGS3 convergem fortemente (ponta-a-ponta
+  16,0/16,4/16,6 Å; Rg 12,0–12,2 Å; pLDDT médio 62–75) — fold compacto
+  robusto e repetível. Já as 3 amostras do GORE1-2T divergem entre si
+  (ponta-a-ponta 22,0/29,2/36,6 Å; pLDDT médio 47–56, todas <60) — o
+  próprio Boltz-2 não converge para esse peptídeo curto.
+- **Tentativa de correção no HADDOCK3:** reconfigurei `[flexref]` nos
+  dois `.toml` (`nseg2 = 1`, `seg_sta_2_1 = 1`, `seg_end_2_1 = 21|75`,
+  peptídeo inteiro como semi-flexível) e reiniciei a partir da etapa 4
+  (`haddock3 ... --restart 4`, reaproveitando os 1000 modelos de
+  rigidbody já calculados). Backup dos runs originais preservado em
+  `haddock/run1-guided_orig_frozen-peptide/` nos dois sistemas.
+- **Resultado da correção — confirmado, não a causa que eu esperava:**
+  o parâmetro foi aplicado corretamente (conferido em
+  `04_flexref/params.cfg`), o `HADDOCK score` não piorou (GORE1-2T:
+  −66,64±1,29 vs. −67,87±3,53 original; GGS3: −55,02±1,47 vs.
+  −56,32±1,89 original — estatisticamente iguais), mas o backbone da
+  nova pose **continua** com RMSD de 0,41–0,75 Å contra a hélice de
+  entrada, e o GGS3 continua ~115 Å ponta-a-ponta. O que mudou foi só a
+  posição/orientação do peptídeo (ainda hélice rígida) em relação ao
+  receptor (deslocamento de Cα de 7–17 Å no GORE1-2T, até ~220 Å na
+  ponta distal do GGS3), não a conformação em si.
+- **Interpretação:** não é um bug de configuração corrigível — é um
+  limite de escopo do `flexref`. Ele faz SA de ângulos de torção em
+  rajadas curtas (centenas de passos), desenhado para ajustar uma pose
+  já aproximadamente correta (loops, cadeias laterais de interface), não
+  para desfazer uma α-hélice já formada e estável. HADDOCK3 não tem,
+  nesse pipeline, uma ferramenta de predição de fold — só de
+  refinamento local. O Boltz-2, sendo um modelo de co-folding real, é a
+  única fonte disponível de hipótese de conformação para a cadeia
+  inteira.
+
+**Decisão (confirmada com o usuário 2026-09-03):** usar a pose Boltz-2
+como estrutura inicial de MD nos dois sistemas — reprodutível e
+confiável para o GGS3; melhor opção disponível (mas não confiável) para
+o GORE1-2T, cuja conformação livre permanece uma incerteza real a
+esclarecer pela própria MD de produção, não pelas ferramentas de
+docking. Por decisão explícita de escopo, o run HADDOCK corrigido
+**não foi propagado** para tríade/protonação/interface/afinidade/figuras
+do Bloco 1 (que continuam referenciando a pose original,
+estatisticamente equivalente e com a mesma limitação) — ele não será a
+estrutura de partida da MD de qualquer forma. Scripts/config:
+`DN2954-GORE1-2T{,-GGS3}/haddock/run_dn2954-gore1-2t{,-ggs3}.toml`
+(config corrigida) e `run1-guided_orig_frozen-peptide/` (run original,
+preservado).
+
 ## Conclusão do bloco — o padrão se manteve?
 
-**Sim, sem ressalva pendente.** Estrutura, tríade catalítica, interface e
-afinidade do peptídeo GGS3 recém-gerado convergem com o que já estava
-validado por 100 ns de MD em `DN2954-GORE12T`, usando dois métodos de
-docking independentes. O peptídeo novo GORE1-2T (sem linkers) mostra o
-mesmo comportamento qualitativo (liga na mesma região do sítio ativo, ΔG
-favorável), sem histórico prévio para comparar diretamente. A única
-ressalva do bloco — His79 com pKa incomum na pose HADDOCK do GORE1-2T —
-foi investigada e resolvida (seção 4): é um artefato de pose (C-terminal
-livre do peptídeo curto fazendo ponte salina acidental com a His
-catalítica), não uma propriedade real do sistema; decisão tomada de usar
-a pose Boltz-2 para esse sistema em MD (ou forçar His79 neutra se a pose
-HADDOCK for usada).
+**Sim, com uma ressalva de escopo (não um erro).** Estrutura, tríade
+catalítica, interface e afinidade do peptídeo GGS3 recém-gerado
+convergem com o que já estava validado por 100 ns de MD em
+`DN2954-GORE12T`, usando dois métodos de docking independentes. O
+peptídeo novo GORE1-2T (sem linkers) mostra o mesmo comportamento
+qualitativo (liga na mesma região do sítio ativo, ΔG favorável), sem
+histórico prévio para comparar diretamente. Duas ressalvas de pose
+foram identificadas e investigadas até a causa raiz: (i) His79 com pKa
+incomum na pose HADDOCK do GORE1-2T (seção 4) — artefato de ponte
+salina com o C-terminal livre do peptídeo, resolvido; (ii) divergência
+de conformação HADDOCK vs. Boltz-2 (seção 7) — limite de escopo do
+`flexref` do HADDOCK3 (refinamento local, não predição de fold),
+confirmado mesmo após corrigir a configuração de flexibilidade. Em
+ambos os casos a decisão é a mesma: **usar a pose Boltz-2 como estrutura
+inicial de MD**, com a incerteza remanescente do GORE1-2T explicitamente
+registrada (não escondida) para a próxima etapa.
 
 **Gate para o próximo bloco (MD triplicata):** revisão humana deste
 documento pelo usuário.
