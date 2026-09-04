@@ -11,7 +11,7 @@ process MINIMIZATION {
     tuple val(meta), path("em.gro"), path("topol.top"), path("*.itp"), emit: system
 
     script:
-    // steep/cg NÃO suportam PME GPU → usa apenas -nb gpu (sem -pme gpu)
+    // steep NÃO suporta PME GPU → usa apenas -nb gpu (sem -pme gpu)
     def gpu_flags = params.use_gpu ? "-nb gpu -gpu_id ${params.gpu_id}" : ""
     def mpi       = params.mpi_cmd  ?: ""
     // CHARMM36 exige vdW com switching (Force-switch, rvdw-switch=1.0-1.2 nm,
@@ -55,11 +55,19 @@ MDP_EOF
         -ntomp ${params.ntomp} \\
         -pin on ${gpu_flags}
 
-    # Estágio 2: conjugate gradient a partir do steep, emtol mais apertado --
-    # cg converge melhor que steep perto do mínimo local (protocolo rigoroso).
+    # Estágio 2: segunda passada de steep a partir do estágio 1, emtol mais
+    # apertado -- 'cg' foi tentado aqui e FALHOU em produção ("The
+    # coordinates could not be constrained. Minimizer 'cg' can not handle
+    # constraint failures") -- limitação conhecida do GROMACS: 'cg' não sabe
+    # rejeitar/reduzir passo quando SETTLE (água) falha a restringir, ao
+    # contrário de 'steep'; como o sistema é sempre solvatado (água sempre
+    # com SETTLE), 'cg' nunca é seguro aqui. 'steep' de novo com emtol mais
+    # baixo ainda entrega o refinamento adicional pretendido, sem essa
+    # incompatibilidade.
     cat > em_cg.mdp << MDP_EOF
-integrator      = cg
+integrator      = steep
 emtol           = 100.0
+emstep          = 0.005
 nsteps          = 50000
 cutoff-scheme   = Verlet
 nstlist         = 10
@@ -74,9 +82,10 @@ MDP_EOF
         -p topol.top -o em_cg.tpr \\
         -maxwarn ${params.maxwarn}
 
-    ${params.gmx_cmd} mdrun \\
+    ${mpi} ${params.gmx_cmd} mdrun \\
         -v -deffnm em_cg \\
-        -ntomp ${params.ntomp}
+        -ntomp ${params.ntomp} \\
+        -pin on ${gpu_flags}
 
     cp em_cg.gro em.gro
     """
