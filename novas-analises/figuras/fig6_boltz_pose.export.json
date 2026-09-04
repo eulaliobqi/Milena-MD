@@ -1,0 +1,47 @@
+{
+  "notice": "Export completed with explicit settings. This report does not establish visual, accessibility, scientific-integrity, or journal-submission compliance.",
+  "outputs": [
+    {
+      "format": "pdf",
+      "kind": "vector-container",
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig6_boltz_pose.pdf",
+      "size_bytes": 1901076
+    },
+    {
+      "format": "png",
+      "kind": "raster",
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig6_boltz_pose.png",
+      "size_bytes": 2061476
+    }
+  ],
+  "provenance": {
+    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/boltz2/, novas-analises/data/DN2954-receptor.pdb",
+    "transformations": [
+      "PyMOL 3.1.0 (scripts/render_boltz_poses.py, executado no ambiente structure do servidor): superposicao estrutural (cmd.align) da cadeia A (receptor) da pose Boltz-2 model_0 sobre data/DN2954-receptor.pdb; mesma orientacao/zoom/escala nos dois paineis",
+      "composicao: autocrop de margem branca por bounding-box de conteudo (scripts/make_fig6_boltz_pose.py, funcao autocrop) -- recorte apenas, sem reamostragem/redimensionamento dos PNGs de origem",
+      "nenhuma alteracao de coordenadas alem da superposicao rigida (sem minimizacao, sem edicao de pose)"
+    ]
+  },
+  "schema_version": "1.0",
+  "settings": {
+    "bbox_inches": null,
+    "dpi": 600.0,
+    "facecolor": "white",
+    "figure_size_inches": [
+      7.0078740157480315,
+      4.686234597860181
+    ],
+    "font_mode": "truetype",
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "pad_inches": 0.1,
+    "transparent": false
+  },
+  "versions": {
+    "matplotlib": "3.8.4",
+    "pillow": "12.3.0"
+  },
+  "warnings": []
+}

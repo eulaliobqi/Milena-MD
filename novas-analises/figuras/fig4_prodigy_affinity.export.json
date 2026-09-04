@@ -1,0 +1,47 @@
+{
+  "notice": "Export completed with explicit settings. This report does not establish visual, accessibility, scientific-integrity, or journal-submission compliance.",
+  "outputs": [
+    {
+      "format": "pdf",
+      "kind": "vector-container",
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig4_prodigy_affinity.pdf",
+      "size_bytes": 24812
+    },
+    {
+      "format": "png",
+      "kind": "raster",
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig4_prodigy_affinity.png",
+      "size_bytes": 51821
+    }
+  ],
+  "provenance": {
+    "method": "PRODIGY-prot 2.3.0, --selection A B, 25C, sobre a pose Boltz-2 model_0 protonada pH 8,2",
+    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,boltz2}/",
+    "transformations": [
+      "nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1",
+      "poses HADDOCK excluidas destas figuras por decisao de escopo (nao seguem para a MD; ver comparativo_vs_DN2954-GORE12T.md secao 7 para os valores completos com HADDOCK)"
+    ]
+  },
+  "schema_version": "1.0",
+  "settings": {
+    "bbox_inches": null,
+    "dpi": 600.0,
+    "facecolor": "white",
+    "figure_size_inches": [
+      2.952755905511811,
+      2.5590551181102366
+    ],
+    "font_mode": "truetype",
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "pad_inches": 0.1,
+    "transparent": false
+  },
+  "versions": {
+    "matplotlib": "3.8.4",
+    "pillow": "12.3.0"
+  },
+  "warnings": []
+}

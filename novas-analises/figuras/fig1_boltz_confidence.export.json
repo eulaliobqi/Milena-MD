@@ -4,21 +4,22 @@
     {
       "format": "pdf",
       "kind": "vector-container",
-      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig2_boltz_confidence.pdf",
-      "size_bytes": 25608
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig1_boltz_confidence.pdf",
+      "size_bytes": 25625
     },
     {
       "format": "png",
       "kind": "raster",
-      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig2_boltz_confidence.png",
-      "size_bytes": 83203
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig1_boltz_confidence.png",
+      "size_bytes": 83201
     }
   ],
   "provenance": {
-    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,haddock,boltz2}/",
+    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,boltz2}/",
     "raw_data_detail": "confidence_*.json de cada amostra de difusao (Boltz-2 --diffusion_samples 3)",
     "transformations": [
-      "nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1"
+      "nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1",
+      "poses HADDOCK excluidas destas figuras por decisao de escopo (nao seguem para a MD; ver comparativo_vs_DN2954-GORE12T.md secao 7 para os valores completos com HADDOCK)"
     ]
   },
   "schema_version": "1.0",
@@ -39,8 +40,8 @@
     "transparent": false
   },
   "versions": {
-    "matplotlib": "3.10.9",
-    "pillow": "12.2.0"
+    "matplotlib": "3.8.4",
+    "pillow": "12.3.0"
   },
   "warnings": []
 }

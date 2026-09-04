@@ -4,6 +4,14 @@ PNG >=600dpi, estilo Nature de partida), usando os helpers do skill
 scientific-visualization (style_presets.py, figure_export.py) em vez de
 parametros de figura escolhidos a mao.
 
+Escopo corrigido em 2026-09-03: mostra so o que segue para a proxima etapa
+(pose Boltz-2, decisao registrada em artigo.md secao 2.2/2.7 e
+comparativo_vs_DN2954-GORE12T.md secao 7). O HADDOCK3 continua descrito
+nos Metodos como validacao cruzada do sitio/interface, mas seus valores
+de trade/protonacao/afinidade/interface (poses de peptideo nao-refinadas,
+ver secao 7 do comparativo) nao entram mais nas figuras principais -- os
+numeros completos com HADDOCK ficam so no comparativo, nao aqui.
+
 Roda localmente (Windows), lendo os dados ja sincronizados de volta do
 servidor em novas-analises/. Nao afirma conformidade de submissao --
 apenas aplica o snapshot de estilo/DPI do skill.
@@ -29,8 +37,10 @@ SYS_LABEL = {"DN2954-GORE1-2T": "GORE1-2T (21 aa)", "DN2954-GORE1-2T-GGS3": "GOR
 COLOR_KEY = {"DN2954-GORE1-2T": 0, "DN2954-GORE1-2T-GGS3": 1}
 
 PROVENANCE_COMMON = {
-    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,haddock,boltz2}/",
-    "transformations": ["nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1"],
+    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,boltz2}/",
+    "transformations": ["nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1",
+                         "poses HADDOCK excluidas destas figuras por decisao de escopo (nao seguem para a MD; "
+                         "ver comparativo_vs_DN2954-GORE12T.md secao 7 para os valores completos com HADDOCK)"],
 }
 
 
@@ -52,38 +62,7 @@ def export(fig, name, provenance_extra=None):
         print(" ->", o["path"], o["size_bytes"], "bytes")
 
 
-# ---------- Fig 1: HADDOCK cluster scores (2 panels, one-and-half width) ----------
-with style_context("nature", palette_name="okabe_ito_on_white") as info:
-    print("style:", info)
-    w, h = mm_figsize(136, 62)
-    fig, axes = plt.subplots(1, 2, figsize=(w, h), layout="constrained")
-    for ax, sysname, panel in zip(axes, SYS_LABEL, "ab"):
-        tsv = BASE / sysname / "haddock" / "run1-guided" / "10_caprieval" / "capri_clt.tsv"
-        rows, header = [], None
-        with open(tsv) as f:
-            for line in f:
-                if line.startswith("#") or not line.strip():
-                    continue
-                parts = line.rstrip("\n").split("\t")
-                if parts[0] == "cluster_rank":
-                    header = parts
-                    continue
-                rows.append(dict(zip(header, parts)))
-        ranks = [int(r["cluster_rank"]) for r in rows]
-        scores = [float(r["score"]) for r in rows]
-        stds = [float(r["score_std"]) for r in rows]
-        color = plt.rcParams["axes.prop_cycle"].by_key()["color"][COLOR_KEY[sysname]]
-        ax.bar(ranks, scores, yerr=stds, color=color, capsize=2, linewidth=0.4, edgecolor="black")
-        ax.set_title(SYS_LABEL[sysname])
-        ax.set_xlabel("cluster (rank)")
-        ax.axhline(0, color="0.4", lw=0.5)
-        ax.text(-0.12, 1.05, panel, transform=ax.transAxes, fontsize=8,
-                fontweight="bold", va="bottom", ha="right")
-    axes[0].set_ylabel("HADDOCK score")
-    export(fig, "fig1_haddock_scores",
-           {"uncertainty": "score_std do capri_clt.tsv (desvio padrao entre modelos do cluster)"})
-
-# ---------- Fig 2: Boltz-2 confidence per sample ----------
+# ---------- Fig 1: Boltz-2 confidence per sample ----------
 conf_paths = {
     "DN2954-GORE1-2T": (BASE / "DN2954-GORE1-2T/boltz2/boltz_out/boltz_results_dn2954_gore1-2t/predictions/dn2954_gore1-2t", "gore1-2t"),
     "DN2954-GORE1-2T-GGS3": (BASE / "DN2954-GORE1-2T-GGS3/boltz2/boltz_out/boltz_results_dn2954_gore1-2t-ggs3/predictions/dn2954_gore1-2t-ggs3", "gore1-2t-ggs3"),
@@ -91,6 +70,7 @@ conf_paths = {
 metrics = ["confidence_score", "iptm", "ptm", "complex_plddt"]
 metric_labels = {"confidence_score": "confidence", "iptm": "ipTM", "ptm": "pTM", "complex_plddt": "pLDDT"}
 with style_context("nature", palette_name="okabe_ito_on_white") as info:
+    print("style:", info)
     w, h = mm_figsize(136, 80)
     fig, ax = plt.subplots(figsize=(w, h), layout="constrained")
     width = 0.19
@@ -113,22 +93,16 @@ with style_context("nature", palette_name="okabe_ito_on_white") as info:
     ax.set_ylabel("valor (0-1)")
     ax.set_ylim(0, 1.05)
     ax.legend(ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.22), frameon=False)
-    export(fig, "fig2_boltz_confidence",
+    export(fig, "fig1_boltz_confidence",
            {"raw_data_detail": "confidence_*.json de cada amostra de difusao (Boltz-2 --diffusion_samples 3)"})
 
-# ---------- Fig 3: Triad distances consistency ----------
+# ---------- Fig 2: Triad distances consistency (Boltz-2 only, 3 samples x 2 systems) ----------
 with style_context("nature", palette_name="okabe_ito_on_white") as info:
-    w, h = mm_figsize(136, 78)
+    w, h = mm_figsize(120, 78)
     fig, ax = plt.subplots(figsize=(w, h), layout="constrained")
     pose_labels, ne2_ser, nd1_asp = [], [], []
     for sysname in SYS_LABEL:
         short = "gore1-2t" if sysname == "DN2954-GORE1-2T" else "gore1-2t-ggs3"
-        haddock_csv = BASE / sysname / "qualidade" / "haddock_triad.csv"
-        rows = list(csv.DictReader(open(haddock_csv)))
-        d = {r["par"]: float(r["distancia_A"]) for r in rows}
-        pose_labels.append(f"{short}\nHADDOCK")
-        ne2_ser.append(d["His-NE2...Ser-OG"])
-        nd1_asp.append(min(d["His-ND1...Asp-OD1"], d["His-ND1...Asp-OD2"]))
         for m in range(3):
             boltz_csv = BASE / sysname / "qualidade" / f"boltz_triad_model{m}.csv"
             rows = list(csv.DictReader(open(boltz_csv)))
@@ -144,23 +118,21 @@ with style_context("nature", palette_name="okabe_ito_on_white") as info:
     ax.set_xticks(x)
     ax.set_xticklabels(pose_labels, rotation=45, ha="right")
     ax.set_ylabel("distancia (A)")
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.38), ncol=3, frameon=False)
-    export(fig, "fig3_triad_distances",
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.42), ncol=3, frameon=False)
+    export(fig, "fig2_triad_distances",
            {"uncertainty": "medida unica por pose (estrutura estatica, sem replicata de MD nesta etapa)"})
 
-# ---------- Fig 4: pKa summary (HIS/ASP/GLU), 4 panels ----------
+# ---------- Fig 3: pKa summary (HIS/ASP/GLU), Boltz-2 model_0 only, 2 panels ----------
 with style_context("nature", palette_name="okabe_ito_on_white") as info:
-    w, h = mm_figsize(183, 62)
-    fig, axes = plt.subplots(1, 4, figsize=(w, h), sharey=True, layout="constrained")
+    w, h = mm_figsize(100, 62)
+    fig, axes = plt.subplots(1, 2, figsize=(w, h), sharey=True, layout="constrained")
     pose_files = [
-        ("GORE1-2T\nHADDOCK", BASE / "DN2954-GORE1-2T/protonacao_ph8.2/haddock_gore1-2t_pka_resumo.csv"),
         ("GORE1-2T\nBoltz-2 m0", BASE / "DN2954-GORE1-2T/protonacao_ph8.2/boltz_gore1-2t_model0_pka_resumo.csv"),
-        ("GGS3\nHADDOCK", BASE / "DN2954-GORE1-2T-GGS3/protonacao_ph8.2/haddock_gore1-2t-ggs3_pka_resumo.csv"),
         ("GGS3\nBoltz-2 m0", BASE / "DN2954-GORE1-2T-GGS3/protonacao_ph8.2/boltz_gore1-2t-ggs3_model0_pka_resumo.csv"),
     ]
     palette = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     color_by_res = {"HIS": palette[0], "ASP": palette[1], "GLU": palette[4 % len(palette)]}
-    for ax, (label, path), panel in zip(axes, pose_files, "abcd"):
+    for ax, (label, path), panel in zip(axes, pose_files, "ab"):
         rows = [r for r in csv.DictReader(open(path)) if r["resname"] != "CYS"]
         for r in rows:
             pka = float(r["pKa_previsto"])
@@ -171,15 +143,15 @@ with style_context("nature", palette_name="okabe_ito_on_white") as info:
                        linewidth=0.6, zorder=3)
         ax.axhline(8.2, color="0.4", ls="--", lw=0.7)
         ax.set_title(label)
-        ax.text(-0.15, 1.06, panel, transform=ax.transAxes, fontsize=8,
+        ax.text(-0.18, 1.06, panel, transform=ax.transAxes, fontsize=8,
                 fontweight="bold", va="bottom", ha="right")
     axes[0].set_ylabel("pKa previsto (PROPKA)")
-    export(fig, "fig4_pka_summary",
+    export(fig, "fig3_pka_summary",
            {"missing_data": "CYS omitida do painel (pKa=99,99 sentinela de nao-titulavel/dissulfeto em todas as poses, ver texto)"})
 
-# ---------- Fig 5: PRODIGY affinity ----------
+# ---------- Fig 4: PRODIGY affinity (Boltz-2 only) ----------
 with style_context("nature", palette_name="okabe_ito_on_white") as info:
-    w, h = mm_figsize(89, 65)
+    w, h = mm_figsize(75, 65)
     fig, ax = plt.subplots(figsize=(w, h), layout="constrained")
     palette = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     bars_x, bars_y, bars_c, labels = [], [], [], []
@@ -187,37 +159,38 @@ with style_context("nature", palette_name="okabe_ito_on_white") as info:
     for sysname in SYS_LABEL:
         rows = list(csv.DictReader(open(BASE / sysname / "afinidade" / "prodigy_results.csv")))
         for r in rows:
+            if r["label"] == "haddock":
+                continue
             bars_x.append(i)
             bars_y.append(float(r["delta_g_kcal_mol"]))
             bars_c.append(palette[COLOR_KEY[sysname]])
-            labels.append(f"{SYS_LABEL[sysname].split(' ')[0]}\n{r['label']}")
+            labels.append(SYS_LABEL[sysname].split(" ")[0])
             i += 1
     ax.bar(bars_x, bars_y, color=bars_c, edgecolor="black", linewidth=0.4)
     ax.set_xticks(bars_x)
     ax.set_xticklabels(labels)
     ax.set_ylabel("dG previsto (kcal/mol)")
     ax.axhline(0, color="black", lw=0.6)
-    export(fig, "fig5_prodigy_affinity",
-           {"method": "PRODIGY-prot 2.3.0, --selection A B, 25C, sobre poses protonadas pH 8,2"})
+    export(fig, "fig4_prodigy_affinity",
+           {"method": "PRODIGY-prot 2.3.0, --selection A B, 25C, sobre a pose Boltz-2 model_0 protonada pH 8,2"})
 
-# ---------- Fig 6: Interface overlap vs baseline MD ----------
+# ---------- Fig 5: Interface overlap vs baseline MD (Boltz-2 only) ----------
 baseline_top = {55, 56, 57, 58, 63, 99, 120, 121, 122, 123, 166, 167, 170, 175, 197, 218, 219, 220, 240, 242}
 with style_context("nature", palette_name="okabe_ito_on_white") as info:
-    w, h = mm_figsize(89, 65)
+    w, h = mm_figsize(75, 65)
     fig, ax = plt.subplots(figsize=(w, h), layout="constrained")
     palette = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     bars_x, bars_y, bars_c, labels = [], [], [], []
     i = 0
     for sysname in SYS_LABEL:
-        for method in ["haddock", "boltz"]:
-            rows = list(csv.DictReader(open(BASE / sysname / "interacao" / f"{method}_interface.csv")))
-            resnums = {int(r["resnum"]) for r in rows}
-            overlap = len(resnums & baseline_top)
-            bars_x.append(i)
-            bars_y.append(overlap)
-            bars_c.append(palette[COLOR_KEY[sysname]])
-            labels.append(f"{SYS_LABEL[sysname].split(' ')[0]}\n{method}")
-            i += 1
+        rows = list(csv.DictReader(open(BASE / sysname / "interacao" / "boltz_interface.csv")))
+        resnums = {int(r["resnum"]) for r in rows}
+        overlap = len(resnums & baseline_top)
+        bars_x.append(i)
+        bars_y.append(overlap)
+        bars_c.append(palette[COLOR_KEY[sysname]])
+        labels.append(SYS_LABEL[sysname].split(" ")[0])
+        i += 1
     ax.bar(bars_x, bars_y, color=bars_c, edgecolor="black", linewidth=0.4)
     ax.axhline(len(baseline_top), color="0.4", ls="--", lw=0.7,
                label=f"total no baseline MD (n={len(baseline_top)})")
@@ -225,7 +198,7 @@ with style_context("nature", palette_name="okabe_ito_on_white") as info:
     ax.set_xticklabels(labels)
     ax.set_ylabel("residuos em comum c/ MD 100 ns")
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.32), frameon=False)
-    export(fig, "fig6_interface_overlap",
+    export(fig, "fig5_interface_overlap",
            {"reference": "DN2954-GORE12T/MD/dn2954-gore12t/analise_extra/interface_residues.csv, top-20 por max_contact_freq"})
 
 print("\nTodas as figuras exportadas em", OUT)

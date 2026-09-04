@@ -146,7 +146,9 @@ interação favorável (ΔG negativo em todos os casos).
 
 ## 7. Divergência de conformação do peptídeo entre HADDOCK3 e Boltz-2
 
-A renderização estrutural (Fig. 7) expôs uma divergência muito maior do
+A renderização estrutural (`figuras/arquivo_divergencia_haddock_boltz/`,
+arquivada — não é mais figura numerada do artigo, ver seção "Escopo
+final" mais abaixo) expôs uma divergência muito maior do
 que a diferença "mesma região, pose ligeiramente diferente" discutida
 nas seções 2 e 5: para o GORE1-2T(GGS)3, o HADDOCK3 devolve uma hélice-α
 quase reta de ~115 Å (75 aa), enquanto o Boltz-2 devolve um fold
@@ -229,3 +231,27 @@ registrada (não escondida) para a próxima etapa.
 
 **Gate para o próximo bloco (MD triplicata):** revisão humana deste
 documento pelo usuário.
+
+## Escopo final: este documento vs. `artigo.md` (correção de 2026-09-03)
+
+Este `comparativo_vs_DN2954-GORE12T.md` é o registro investigativo
+completo do Bloco 1 — mantém os dois métodos de docking lado a lado
+(HADDOCK3 padrão-ouro e Boltz-2 fronteira), incluindo os achados de
+poses que **não avançam** para a próxima etapa (His79 anômala, hélice
+não-refinada do HADDOCK), porque entender por que uma pose foi
+descartada é parte do controle de qualidade.
+
+`artigo.md`, por decisão explícita do usuário ("corrigir toda
+metodologia, resultados e figuras só com o que irá prosseguir"), foi
+reescrito para descrever **apenas o que segue para a MD**: a pose
+Boltz-2 `model_0` para os dois sistemas. Nele, o HADDOCK3 permanece
+descrito nos Métodos como validação cruzada independente do sítio de
+ligação (ele concorda com a região de interface e a tétrade catalítica
+— isso é sinal de qualidade real), mas seus valores próprios de
+tríade/protonação/interface/afinidade e a figura de pose completa
+foram removidos das figuras/resultados principais, já que essa pose
+específica não é usada em nenhuma etapa seguinte. Figuras antigas
+`fig1_haddock_scores` e `fig7_consensus_poses` foram arquivadas em
+`figuras/arquivo_divergencia_haddock_boltz/` (não numeradas no artigo).
+As figuras 1–6 atuais de `artigo.md` usam exclusivamente dados da pose
+Boltz-2.

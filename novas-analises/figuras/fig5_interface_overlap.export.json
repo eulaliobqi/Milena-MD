@@ -4,21 +4,22 @@
     {
       "format": "pdf",
       "kind": "vector-container",
-      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig6_interface_overlap.pdf",
-      "size_bytes": 26066
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig5_interface_overlap.pdf",
+      "size_bytes": 24646
     },
     {
       "format": "png",
       "kind": "raster",
-      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig6_interface_overlap.png",
-      "size_bytes": 94434
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig5_interface_overlap.png",
+      "size_bytes": 81326
     }
   ],
   "provenance": {
-    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,haddock,boltz2}/",
+    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,boltz2}/",
     "reference": "DN2954-GORE12T/MD/dn2954-gore12t/analise_extra/interface_residues.csv, top-20 por max_contact_freq",
     "transformations": [
-      "nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1"
+      "nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1",
+      "poses HADDOCK excluidas destas figuras por decisao de escopo (nao seguem para a MD; ver comparativo_vs_DN2954-GORE12T.md secao 7 para os valores completos com HADDOCK)"
     ]
   },
   "schema_version": "1.0",
@@ -27,7 +28,7 @@
     "dpi": 600.0,
     "facecolor": "white",
     "figure_size_inches": [
-      3.5039370078740157,
+      2.952755905511811,
       2.5590551181102366
     ],
     "font_mode": "truetype",
@@ -39,8 +40,8 @@
     "transparent": false
   },
   "versions": {
-    "matplotlib": "3.10.9",
-    "pillow": "12.2.0"
+    "matplotlib": "3.8.4",
+    "pillow": "12.3.0"
   },
   "warnings": []
 }

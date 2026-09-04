@@ -4,20 +4,21 @@
     {
       "format": "pdf",
       "kind": "vector-container",
-      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig3_triad_distances.pdf",
-      "size_bytes": 27663
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig2_triad_distances.pdf",
+      "size_bytes": 26772
     },
     {
       "format": "png",
       "kind": "raster",
-      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig3_triad_distances.png",
-      "size_bytes": 186291
+      "path": "C:\\Users\\eulal\\.claude\\Milena-MD\\novas-analises\\figuras\\fig2_triad_distances.png",
+      "size_bytes": 146930
     }
   ],
   "provenance": {
-    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,haddock,boltz2}/",
+    "raw_data": "novas-analises/{DN2954-GORE1-2T,DN2954-GORE1-2T-GGS3}/{qualidade,protonacao_ph8.2,interacao,afinidade,boltz2}/",
     "transformations": [
-      "nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1"
+      "nenhuma alem da leitura direta dos CSV/TSV/JSON ja produzidos pelas etapas do Bloco 1",
+      "poses HADDOCK excluidas destas figuras por decisao de escopo (nao seguem para a MD; ver comparativo_vs_DN2954-GORE12T.md secao 7 para os valores completos com HADDOCK)"
     ],
     "uncertainty": "medida unica por pose (estrutura estatica, sem replicata de MD nesta etapa)"
   },
@@ -27,7 +28,7 @@
     "dpi": 600.0,
     "facecolor": "white",
     "figure_size_inches": [
-      5.354330708661418,
+      4.724409448818898,
       3.070866141732284
     ],
     "font_mode": "truetype",
@@ -39,8 +40,8 @@
     "transparent": false
   },
   "versions": {
-    "matplotlib": "3.10.9",
-    "pillow": "12.2.0"
+    "matplotlib": "3.8.4",
+    "pillow": "12.3.0"
   },
   "warnings": []
 }
