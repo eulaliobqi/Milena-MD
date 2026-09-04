@@ -1,0 +1,4 @@
+sample_id,receptor,ligand,triad_1,triad_2,triad_3,triad_4
+dn2954-gore12t-boltz2-r1,/home/eulalio/gromacs/Milena-MD/data/DN2954-receptor-boltz2.pdb,/home/eulalio/gromacs/Milena-MD/data/GORE1-2T-ligand-boltz2-DN2954.pdb,79,126,222,216
+dn2954-gore12t-boltz2-r2,/home/eulalio/gromacs/Milena-MD/data/DN2954-receptor-boltz2.pdb,/home/eulalio/gromacs/Milena-MD/data/GORE1-2T-ligand-boltz2-DN2954.pdb,79,126,222,216
+dn2954-gore12t-boltz2-r3,/home/eulalio/gromacs/Milena-MD/data/DN2954-receptor-boltz2.pdb,/home/eulalio/gromacs/Milena-MD/data/GORE1-2T-ligand-boltz2-DN2954.pdb,79,126,222,216
