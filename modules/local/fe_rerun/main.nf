@@ -14,7 +14,19 @@ process FE_RERUN {
     tuple val(meta), path("fe_rerun.log"),            emit: log
 
     script:
+    // CHARMM36 exige vdW com switching (Force-switch); Cut-off simples é
+    // o protocolo recomendado só p/ AMBER (ver minimization/main.nf).
+    def is_charmm = params.forcefield.toString().startsWith('charmm36')
+    def vdw_block = is_charmm
+        ? "vdwtype              = Cut-off\nvdw-modifier         = Force-switch\nrvdw-switch          = 1.0\nrvdw                 = 1.2\nDispCorr             = no"
+        : "vdwtype              = Cut-off\nrvdw                 = 1.2"
+    // topol.top inclui a .ff externa por caminho relativo (ver
+    // box_solvate_ions/main.nf) -- precisa dela de novo aqui.
+    def ff_link = params.forcefield_dir
+        ? "ln -sfn ${params.forcefield_dir} ./${new File(params.forcefield_dir).name}"
+        : ''
     """
+    ${ff_link}
     echo "=== FE_RERUN: ${meta.id} ===" >&2
     cp ${top} topol.top
     cp itp_in/*.itp .
@@ -37,8 +49,7 @@ cutoff-scheme        = Verlet
 nstlist              = 20
 coulombtype          = PME
 rcoulomb             = 1.2
-vdwtype              = Cut-off
-rvdw                 = 1.2
+${vdw_block}
 constraints          = h-bonds
 constraint-algorithm = LINCS
 pbc                  = xyz

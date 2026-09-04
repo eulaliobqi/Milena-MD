@@ -20,9 +20,15 @@ process PRODUCTION {
     // o protocolo recomendado só p/ AMBER (ver minimization/main.nf).
     def is_charmm = params.forcefield.toString().startsWith('charmm36')
     def vdw_block = is_charmm
-        ? "vdwtype              = Force-switch\nvdw-modifier         = Force-switch\nrvdw-switch          = 1.0\nrvdw                 = 1.2\nDispCorr             = no"
+        ? "vdwtype              = Cut-off\nvdw-modifier         = Force-switch\nrvdw-switch          = 1.0\nrvdw                 = 1.2\nDispCorr             = no"
         : "vdwtype              = Cut-off\nrvdw                 = 1.2"
+    // topol.top inclui a .ff externa por caminho relativo (ver box_solvate_ions) --
+    // precisa dela de novo aqui, senão grompp falha em resolver o #include.
+    def ff_link = params.forcefield_dir
+        ? "ln -sfn ${params.forcefield_dir} ./${new File(params.forcefield_dir).name}"
+        : ''
     """
+    ${ff_link}
     cp ${top} topol.top
     cp itp_in/*.itp .
 

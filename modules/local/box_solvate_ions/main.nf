@@ -11,7 +11,17 @@ process BOX_SOLVATE_IONS {
     tuple val(meta), path("ions.gro"), path("topol.top"), path("*.itp"), emit: system
 
     script:
+    // topol.top do TOPOLOGY inclui a .ff externa por CAMINHO RELATIVO ao cwd
+    // de quando pdb2gmx rodou (ex.: charmm36* não empacotada no GROMACS
+    // stock, ver TOPOLOGY) -- grompp resolve esse #include relativo ao SEU
+    // PRÓPRIO cwd, não ao de onde o .top foi gerado. Cada processo que roda
+    // grompp nesta topologia precisa da .ff de novo no seu work dir (mesma
+    // exigência confirmada em produção no projeto irmão tatiane-MD).
+    def ff_link = params.forcefield_dir
+        ? "ln -sfn ${params.forcefield_dir} ./${new File(params.forcefield_dir).name}"
+        : ''
     """
+    ${ff_link}
     # Copia topology e itps (solvate e genion modificam topol.top)
     cp ${top} topol.top
     cp itp_in/*.itp .

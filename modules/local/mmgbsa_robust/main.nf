@@ -54,7 +54,14 @@ process MMGBSA_ROBUST {
     // default correto pra topologia amber nativa sem precisar da flag.
     def is_charmm    = params.forcefield.toString().startsWith('charmm36')
     def pbradii_line = is_charmm ? "PBRadii=7,\n" : ""
+    // topol.top inclui a .ff externa por caminho relativo (ver
+    // box_solvate_ions/main.nf) -- gmx_MMPBSA le topol.top via ParmEd, que
+    // resolve o mesmo #include relativo ao cwd desta task.
+    def ff_link = params.forcefield_dir
+        ? "ln -sfn ${params.forcefield_dir} ./${new File(params.forcefield_dir).name}"
+        : ''
     """
+    ${ff_link}
     echo "=== MMGBSA_ROBUST: ${meta.id} ===" >&2
 
     {
